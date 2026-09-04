@@ -71,6 +71,7 @@ interface MailStoreState {
   clearTimeline: () => void;
   setConfirmationCard: (card: ConfirmationModalState | null) => void;
   setIsAIExecuting: (executing: boolean) => void;
+  resetStore: () => void;
 }
 
 export const useMailStore = create<MailStoreState>((set, get) => ({
@@ -92,6 +93,24 @@ export const useMailStore = create<MailStoreState>((set, get) => ({
   confirmationCard: null,
   isAIExecuting: false,
   isDarkMode: false,
+
+  resetStore: () =>
+    set({
+      activeView: 'inbox',
+      emails: [],
+      selectedEmailId: null,
+      filterState: {},
+      composeState: {
+        isOpen: false,
+        draftId: 'draft_default',
+        to: [],
+        subject: '',
+        body: '',
+      },
+      actionTimeline: [],
+      confirmationCard: null,
+      isAIExecuting: false,
+    }),
 
   toggleDarkMode: () =>
     set((state) => {

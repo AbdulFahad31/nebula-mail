@@ -18,11 +18,11 @@ export function getOAuth2Client() {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
-export function getAuthUrl(): string {
+export function getAuthUrl(promptParam: string = 'consent'): string {
   const client = getOAuth2Client();
   return client.generateAuthUrl({
     access_type: 'offline',
-    prompt: 'consent',
+    prompt: promptParam,
     scope: SCOPES,
   });
 }

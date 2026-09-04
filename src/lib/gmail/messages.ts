@@ -178,8 +178,14 @@ export async function getEmailsFromCache(
   userId: string,
   filters: EmailFilterParams = {}
 ): Promise<EmailMessage[]> {
-  // Ensure DB cache has emails
-  await seedDemoCache(userId);
+  // Check if user has a connected OAuth account or existing cached emails
+  const oauthAccount = await db.oAuthAccount.findUnique({ where: { userId } });
+  const count = await db.emailCache.count({ where: { userId } });
+
+  // Only seed demo cache if user has NO connected OAuth account AND email cache is empty
+  if (!oauthAccount && count === 0) {
+    await seedDemoCache(userId);
+  }
 
   const whereClause: any = { userId };
 
