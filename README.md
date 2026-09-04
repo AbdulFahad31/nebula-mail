@@ -43,6 +43,23 @@ Nebula Mail is a modern desktop-first mail application engineered with a **Unifi
 
 ---
 
+## 🏛️ Architecture Decisions & Trade-offs
+
+### SQLite vs. PostgreSQL
+For this implementation, **Prisma ORM with SQLite (`dev.db`)** was retained as the local storage engine instead of deploying a remote PostgreSQL cluster.
+
+- **Rationale**:
+  - **Zero-Config Local Evaluation**: Enables instant, reproducible test runs across Vitest and Playwright without requiring local Docker Postgres containers or external cloud database credentials.
+  - **Deterministic Performance**: Offers sub-millisecond local reads/writes during high-frequency AI tool calls and search filter queries.
+- **Production Migration Plan (PostgreSQL)**:
+  1. Change `datasource db` provider in `prisma/schema.prisma` from `sqlite` to `postgresql`.
+  2. Update column mappings: Replace comma-separated string labels (`EmailCache.labels`) with native PostgreSQL arrays (`String[]`).
+  3. Configure connection pooling using PgBouncer / Neon Serverless Pooler via `@prisma/adapter-pg`.
+  4. Wrap concurrent batch sync writes inside Prisma interactive transactions (`db.$transaction()`).
+
+---
+
+
 ## 📋 Feature Guide & Verification
 
 | # | Feature Name | Description & Trigger | Expected Visual Outcome |

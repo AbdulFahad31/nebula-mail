@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Source_Serif_4, IBM_Plex_Sans } from 'next/font/google';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 import './globals.css';
 
 const sourceSerif = Source_Serif_4({
@@ -22,9 +23,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sourceSerif.variable} ${ibmPlexSans.variable} light h-full antialiased`}>
-      <body className="h-full bg-[#FAFAF8] text-[#201F1B] font-sans selection:bg-[#24463A]/15 selection:text-[#24463A]">
-        {children}
+      <body className="h-full bg-[#FAFAF8] text-[#201F1B] dark:bg-[#1E1D1A] dark:text-[#F4F4F0] font-sans selection:bg-[#24463A]/15 selection:text-[#24463A]">
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );
 }
+

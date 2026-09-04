@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '@/components/layout/Navbar';
 import { InboxList } from '@/components/mail/InboxList';
 import { EmailDetail } from '@/components/mail/EmailDetail';
 import { AssistantPanel } from '@/components/assistant/AssistantPanel';
 import { ComposeModal } from '@/components/mail/ComposeModal';
-import { useMailStore } from '@/lib/store/useMailStore';
 
 export default function InboxPage() {
-  const { setEmails } = useMailStore();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Setup Server-Sent Events (SSE) listener for realtime push updates
@@ -19,12 +19,8 @@ export default function InboxPage() {
       try {
         const data = JSON.parse(e.data);
         if (data.type === 'INBOX_UPDATED') {
-          // Re-fetch email cache when new email arrives
-          fetch('/api/mail/list')
-            .then((res) => res.json())
-            .then((d) => {
-              if (d.emails) setEmails(d.emails);
-            });
+          // Invalidate TanStack Query cache to trigger instant re-fetch of server data
+          queryClient.invalidateQueries({ queryKey: ['emails'] });
         }
       } catch (err) {
         console.error('SSE parse error:', err);
@@ -34,10 +30,10 @@ export default function InboxPage() {
     return () => {
       eventSource.close();
     };
-  }, [setEmails]);
+  }, [queryClient]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#FAFAF8] text-[#201F1B] selection:bg-[#24463A]/15 selection:text-[#24463A] font-sans">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#FAFAF8] dark:bg-[#1E1D1A] text-[#201F1B] dark:text-[#F4F4F0] selection:bg-[#24463A]/15 selection:text-[#24463A] font-sans transition-colors">
       {/* App Navbar */}
       <Navbar />
 
@@ -62,3 +58,4 @@ export default function InboxPage() {
     </div>
   );
 }
+
