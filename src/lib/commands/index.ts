@@ -244,20 +244,8 @@ export async function commandSendEmail(params: { composeDraftId: string }) {
 export async function commandReplyEmail(params: { messageId?: string; body: string }) {
   const store = useMailStore.getState();
 
-  const targetId = (params.messageId || store.selectedEmailId || '').toLowerCase();
-
-  const targetEmail =
-    store.emails.find((e) => {
-      if (!targetId) return false;
-      const idMatch = e.id === params.messageId || e.gmailMessageId === params.messageId;
-      const prefixMatch = e.gmailMessageId.toLowerCase().includes(targetId);
-      const senderMatch =
-        (targetId.includes('alex') && e.sender.toLowerCase().includes('alex')) ||
-        (targetId.includes('sarah') && e.sender.toLowerCase().includes('sarah')) ||
-        (targetId.includes('john') && e.sender.toLowerCase().includes('john'));
-      return idMatch || prefixMatch || senderMatch;
-    }) ||
-    (store.selectedEmailId ? store.emails.find((e) => e.id === store.selectedEmailId) : store.emails[0]);
+  const targetId = params.messageId || store.selectedEmailId;
+  const targetEmail = store.emails.find((e) => e.id === targetId || e.gmailMessageId === targetId);
 
   if (!targetEmail) {
     return { success: false, error: 'No active email found to reply to' };
@@ -267,6 +255,15 @@ export async function commandReplyEmail(params: { messageId?: string; body: stri
   const replySubject = targetEmail.subject.startsWith('Re:')
     ? targetEmail.subject
     : `Re: ${targetEmail.subject}`;
+
+  store.openComposeModal();
+  store.setComposeState({
+    to: replyTo,
+    subject: replySubject,
+    body: params.body,
+    replyToMessageId: targetEmail.id,
+    threadId: targetEmail.threadId,
+  });
 
   return new Promise<{ success: boolean; requiresConfirmation: boolean }>((resolve) => {
     store.setConfirmationCard({

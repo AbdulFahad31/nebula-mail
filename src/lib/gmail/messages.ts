@@ -90,64 +90,58 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
 }
 
 export async function seedDemoCache(userId: string): Promise<EmailMessage[]> {
-  // Ensure User record exists to satisfy foreign key constraints
-  await db.user.upsert({
-    where: { id: userId },
-    update: {},
-    create: {
-      id: userId,
-      email: userId.includes('@') ? userId : `${userId}@nebulamail.app`,
-      name: 'Nebula User',
-    },
-  });
+  const existingCount = await db.emailCache.count({ where: { userId } });
 
-  for (const email of INITIAL_MOCK_EMAILS) {
-    const labelsStr = Array.isArray(email.labels) ? email.labels.join(',') : email.labels || 'INBOX';
-    const userThreadId = `${email.threadId}_${userId}`;
-    const userMsgId = `${email.gmailMessageId}_${userId}`;
-
-    await db.thread.upsert({
-      where: { gmailThreadId: userThreadId },
-      update: {
-        subject: email.subject,
-        snippet: email.snippet,
-        participantSummary: email.senderName || email.sender,
-        updatedAt: new Date(email.receivedAt),
-      },
+  if (existingCount === 0) {
+    // Ensure User record exists to satisfy foreign key constraints
+    await db.user.upsert({
+      where: { id: userId },
+      update: {},
       create: {
-        userId,
-        gmailThreadId: userThreadId,
-        subject: email.subject,
-        snippet: email.snippet,
-        participantSummary: email.senderName || email.sender,
-        updatedAt: new Date(email.receivedAt),
+        id: userId,
+        email: userId.includes('@') ? userId : `${userId}@nebulamail.app`,
+        name: 'Nebula User',
       },
     });
 
-    await db.emailCache.upsert({
-      where: { gmailMessageId: userMsgId },
-      update: {
-        subject: email.subject,
-        snippet: email.snippet,
-        bodyText: email.bodyText,
-        bodyHtml: email.bodyHtml,
-      },
-      create: {
-        userId,
-        gmailMessageId: userMsgId,
-        threadId: userThreadId,
-        sender: email.sender,
-        recipient: email.recipient,
-        subject: email.subject,
-        snippet: email.snippet,
-        bodyText: email.bodyText,
-        bodyHtml: email.bodyHtml,
-        receivedAt: new Date(email.receivedAt),
-        isRead: email.isRead,
-        isSent: email.isSent,
-        labels: labelsStr,
-      },
-    });
+    for (const email of INITIAL_MOCK_EMAILS) {
+      const labelsStr = Array.isArray(email.labels) ? email.labels.join(',') : email.labels || 'INBOX';
+      const userThreadId = `${email.threadId}_${userId}`;
+      const userMsgId = `${email.gmailMessageId}_${userId}`;
+
+      await db.thread.upsert({
+        where: { gmailThreadId: userThreadId },
+        update: {},
+        create: {
+          userId,
+          gmailThreadId: userThreadId,
+          subject: email.subject,
+          snippet: email.snippet,
+          participantSummary: email.senderName || email.sender,
+          updatedAt: new Date(email.receivedAt),
+        },
+      });
+
+      await db.emailCache.upsert({
+        where: { gmailMessageId: userMsgId },
+        update: {},
+        create: {
+          userId,
+          gmailMessageId: userMsgId,
+          threadId: userThreadId,
+          sender: email.sender,
+          recipient: email.recipient,
+          subject: email.subject,
+          snippet: email.snippet,
+          bodyText: email.bodyText,
+          bodyHtml: email.bodyHtml,
+          receivedAt: new Date(email.receivedAt),
+          isRead: email.isRead,
+          isSent: email.isSent,
+          labels: labelsStr,
+        },
+      });
+    }
   }
 
   const cached = await db.emailCache.findMany({
@@ -202,7 +196,6 @@ export async function getEmailsFromCache(
       { subject: { contains: filters.keyword } },
       { snippet: { contains: filters.keyword } },
       { bodyText: { contains: filters.keyword } },
-      { sender: { contains: filters.keyword } },
     ];
   }
 
