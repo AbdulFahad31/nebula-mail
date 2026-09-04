@@ -22,39 +22,41 @@ export function ConfirmationCard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="p-3.5 bg-[#FAFAF8] border border-[#201F1B]/15 rounded-md space-y-2.5 text-xs font-sans shadow-sm"
+      initial={{ opacity: 0, scale: 0.98, y: 4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="p-4 bg-[#1C1F24] border border-[#2A2D33] rounded-lg space-y-3 text-xs font-sans"
     >
-      <div className="flex items-center gap-1.5 text-[#201F1B] font-medium text-xs">
-        <AlertCircle className="w-4 h-4 text-[#24463A] shrink-0" />
+      <div className="flex items-center gap-2 text-[#EDECE8] font-serif-display font-semibold text-xs">
+        <AlertCircle className="w-4 h-4 text-[#6B9971] shrink-0" />
         <span>Authorization required</span>
       </div>
 
-      <div className="text-xs text-[#201F1B] font-medium leading-relaxed">
+      <div className="text-xs text-[#EDECE8] font-medium leading-relaxed">
         {confirmationCard.summary}
       </div>
 
       {/* Payload Preview Card */}
-      <div className="p-2.5 bg-[#FAFAF8] rounded-md border border-[#201F1B]/15 text-xs space-y-1 font-sans">
+      <div className="p-3 bg-[#14161A] rounded-md border border-[#2A2D33] text-xs space-y-1.5 font-sans">
         <div>
-          <span className="text-[#201F1B]/60">To:</span>{' '}
-          <span className="text-[#201F1B] font-medium">{confirmationCard.payload.to.join(', ')}</span>
+          <span className="text-[#6B6D73]">To:</span>{' '}
+          <span className="text-[#EDECE8] font-medium">{confirmationCard.payload.to.join(', ')}</span>
         </div>
         <div>
-          <span className="text-[#201F1B]/60">Subject:</span>{' '}
-          <span className="text-[#201F1B] font-serif-display font-semibold">{confirmationCard.payload.subject}</span>
+          <span className="text-[#6B6D73]">Subject:</span>{' '}
+          <span className="text-[#EDECE8] font-serif-display font-semibold">
+            {confirmationCard.payload.subject}
+          </span>
         </div>
-        <div className="text-[#201F1B]/60 line-clamp-2 pt-1 border-t border-[#201F1B]/15 italic font-sans">
+        <div className="text-[#9A9CA3] line-clamp-2 pt-1.5 border-t border-[#2A2D33] italic font-sans leading-relaxed">
           "{confirmationCard.payload.body}"
         </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-0.5 font-sans">
+      <div className="flex items-center gap-2 pt-1 font-sans">
         <button
           onClick={handleConfirm}
           disabled={isExecuting}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 px-3 rounded-md bg-[#24463A] hover:bg-[#1C372E] text-[#FAFAF8] font-medium text-xs transition-colors disabled:opacity-50 font-sans"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md bg-[#1C1F24] hover:bg-[#6B9971] text-[#6B9971] hover:text-[#EDECE8] font-medium text-xs border border-[#6B9971]/60 transition-colors disabled:opacity-50 font-sans"
         >
           {isExecuting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -67,7 +69,7 @@ export function ConfirmationCard() {
         <button
           onClick={confirmationCard.onCancel}
           disabled={isExecuting}
-          className="px-3 py-1.5 rounded-md bg-[#FAFAF8] hover:bg-[#201F1B]/5 text-[#201F1B] font-medium text-xs border border-[#201F1B]/15 transition-colors font-sans"
+          className="px-3 py-1.5 rounded-md bg-[#14161A] hover:bg-[#1C1F24] text-[#9A9CA3] hover:text-[#EDECE8] font-medium text-xs border border-[#2A2D33] transition-colors font-sans"
         >
           Cancel
         </button>
@@ -75,3 +77,4 @@ export function ConfirmationCard() {
     </motion.div>
   );
 }
+

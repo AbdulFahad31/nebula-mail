@@ -9,6 +9,15 @@ interface EmailRowProps {
   email: EmailMessage;
 }
 
+// Deterministic avatar styles using single accent palette
+function getAvatarStyles(name: string) {
+  return {
+    bg: 'bg-[#6B9971]/15',
+    text: 'text-[#6B9971]',
+    border: 'border-[#6B9971]/30',
+  };
+}
+
 export function EmailRow({ email }: EmailRowProps) {
   const { selectedEmailId } = useMailStore();
   const isSelected = selectedEmailId === email.id || selectedEmailId === email.gmailMessageId;
@@ -22,40 +31,57 @@ export function EmailRow({ email }: EmailRowProps) {
     commandOpenEmail({ messageId: email.id });
   };
 
+  const displayName = email.senderName || email.sender;
+  const avatar = getAvatarStyles(displayName);
+
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex items-start gap-2.5 px-3 py-2.5 border-b border-[#201F1B]/15 cursor-pointer transition-colors duration-100 ${
+      className={`group relative flex items-start gap-3 py-3 px-3.5 border-b border-[#2A2D33] cursor-pointer transition-colors duration-150 ${
         isSelected
-          ? 'bg-[#FAFAF8] border-l-2 border-l-[#24463A]'
-          : email.isRead
-          ? 'bg-[#FAFAF8] hover:bg-[#201F1B]/5 text-[#201F1B]/60'
-          : 'bg-[#FAFAF8] hover:bg-[#201F1B]/5 text-[#201F1B]'
+          ? 'bg-[#1C1F24] border-l-2 border-l-[#6B9971]'
+          : 'bg-[#14161A] hover:bg-[#1C1F24]'
       }`}
     >
-      {/* Unread marker dot (Bottle Green accent) */}
-      <div className="w-1.5 pt-1.5 flex justify-center shrink-0">
+      {/* Unread marker dot (Single Accent Color Only) */}
+      <div className="w-2 pt-2 flex justify-center shrink-0">
         {!email.isRead && (
-          <span className="w-1.5 h-1.5 rounded-full bg-[#24463A]" />
+          <span className="w-2 h-2 rounded-full bg-[#6B9971]" />
         )}
       </div>
 
-      {/* Sender Avatar */}
-      <div className="w-6 h-6 rounded-full bg-[#FAFAF8] border border-[#201F1B]/15 flex items-center justify-center text-[11px] font-medium text-[#201F1B] shrink-0 mt-0.5 font-sans">
-        {(email.senderName || email.sender).charAt(0).toUpperCase()}
+      {/* Monogram Avatar */}
+      <div
+        className={`w-7 h-7 rounded-full border ${avatar.bg} ${avatar.border} ${avatar.text} flex items-center justify-center text-xs font-serif-display font-semibold shrink-0 mt-0.5 transition-transform duration-150 group-hover:scale-[1.03]`}
+      >
+        {displayName.charAt(0).toUpperCase()}
       </div>
 
-      {/* Email Metadata & Snippet */}
-      <div className="flex-1 min-w-0">
+      {/* Email Metadata & Typographic Hierarchy */}
+      <div className="flex-1 min-w-0 space-y-0.5">
         <div className="flex items-baseline justify-between gap-2">
-          <span className={`text-xs font-serif-display font-semibold truncate ${!email.isRead ? 'text-[#201F1B]' : 'text-[#201F1B]/60'}`}>
-            {email.senderName || email.sender}
+          <span
+            className={`text-[13.5px] font-serif-display tracking-[-0.01em] truncate ${
+              !email.isRead ? 'font-semibold text-[#EDECE8]' : 'font-semibold text-[#9A9CA3]'
+            }`}
+          >
+            {displayName}
           </span>
-          <span className="text-[11px] text-[#201F1B]/60 font-sans shrink-0">{formattedDate}</span>
+          <span className="text-[11px] font-sans tracking-normal text-[#6B6D73] shrink-0 font-normal">
+            {formattedDate}
+          </span>
         </div>
-        <div className="text-xs font-serif-display font-semibold text-[#201F1B] truncate mt-0.5">{email.subject}</div>
-        <div className="text-xs text-[#201F1B]/60 truncate mt-0.5 font-sans">{email.snippet}</div>
+
+        <div className="text-[13px] font-serif-display tracking-[-0.01em] text-[#EDECE8] truncate font-semibold leading-tight">
+          {email.subject}
+        </div>
+
+        <div className="text-[12px] font-sans tracking-normal text-[#9A9CA3] truncate leading-snug line-clamp-1 font-normal">
+          {email.snippet}
+        </div>
       </div>
     </div>
   );
 }
+
+

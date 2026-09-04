@@ -245,10 +245,15 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
   const newMsgId = `sent_${Date.now()}`;
   const threadId = draft.threadId || `thread_${Date.now()}`;
 
+  const user = await db.user.findUnique({ where: { id: userId } });
+  const senderEmail = user?.email || 'me@nebulamail.app';
+  const senderName = user?.name || senderEmail.split('@')[0];
+
   try {
     const gmail = await getAuthenticatedGmailClient(userId);
 
     const rawMessage = [
+      `From: ${senderName} <${senderEmail}>`,
       `To: ${recipientStr}`,
       `Subject: ${draft.subject}`,
       `Content-Type: text/html; charset=utf-8`,
@@ -272,11 +277,11 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     });
 
     if (res.data.id) {
-      // Refresh DB Cache
+      console.log(`[Gmail API] Live email sent successfully! Message ID: ${res.data.id}`);
       await syncUserMessagesToCache(userId);
     }
-  } catch (error) {
-    console.warn('Gmail API send fallback to local cache:', error);
+  } catch (error: any) {
+    console.warn('[Gmail API Send Fallback]:', error?.message || error);
   }
 
   // Record in Prisma DB
@@ -297,7 +302,7 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
       userId,
       gmailMessageId: newMsgId,
       threadId,
-      sender: 'me@nebulamail.app',
+      sender: `${senderName} <${senderEmail}>`,
       recipient: recipientStr,
       subject: draft.subject,
       snippet: draft.body.substring(0, 100),
@@ -315,8 +320,8 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     gmailMessageId: created.gmailMessageId,
     threadId: created.threadId,
     sender: created.sender,
-    senderName: 'Me',
-    senderEmail: 'me@nebulamail.app',
+    senderName,
+    senderEmail,
     recipient: created.recipient,
     subject: created.subject,
     snippet: created.snippet,

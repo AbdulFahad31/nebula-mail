@@ -33,11 +33,11 @@ export default function InboxPage() {
   }, [queryClient]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#FAFAF8] dark:bg-[#1E1D1A] text-[#201F1B] dark:text-[#F4F4F0] selection:bg-[#24463A]/15 selection:text-[#24463A] font-sans transition-colors">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#14161A] text-[#EDECE8] selection:bg-[#6B9971]/25 selection:text-[#EDECE8] font-sans">
       {/* App Navbar */}
       <Navbar />
 
-      {/* Main 3-Pane Layout */}
+      {/* Main 4-Column Layout Architecture */}
       <div className="flex-1 flex overflow-hidden">
         {/* Pane 1: Inbox List & Search Filters */}
         <div className="w-80 md:w-96 h-full shrink-0">
@@ -58,4 +58,6 @@ export default function InboxPage() {
     </div>
   );
 }
+
+
 

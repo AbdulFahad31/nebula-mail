@@ -3,6 +3,7 @@ import { db } from '@/lib/db/prisma';
 import { encryptToken, decryptToken } from './crypto';
 
 const SCOPES = [
+  'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',

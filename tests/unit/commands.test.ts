@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useMailStore } from '@/lib/store/useMailStore';
-import { commandApplyFilter, commandPopulateCompose, commandOpenCompose } from '@/lib/commands';
+import { commandApplyFilter, commandPopulateCompose, commandOpenCompose } from '@/lib/commands/index';
 
 describe('Shared Application Command Layer', () => {
   beforeEach(() => {
