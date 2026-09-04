@@ -50,6 +50,10 @@ interface MailStoreState {
   confirmationCard: ConfirmationModalState | null;
   isAIExecuting: boolean;
 
+  // Secondary Dark Mode State (Item 6)
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+
   // Actions / Reducers
   setActiveView: (view: 'inbox' | 'sent') => void;
   setEmails: (emails: EmailMessage[]) => void;
@@ -87,10 +91,25 @@ export const useMailStore = create<MailStoreState>((set, get) => ({
   actionTimeline: [],
   confirmationCard: null,
   isAIExecuting: false,
+  isDarkMode: false,
+
+  toggleDarkMode: () =>
+    set((state) => {
+      const next = !state.isDarkMode;
+      if (typeof document !== 'undefined') {
+        if (next) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      return { isDarkMode: next };
+    }),
 
   setActiveView: (view) => set({ activeView: view, selectedEmailId: null }),
 
   setEmails: (emails) => set({ emails }),
+
 
   setSelectedEmailId: (id) => set({ selectedEmailId: id }),
 

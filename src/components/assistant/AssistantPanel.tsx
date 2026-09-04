@@ -64,17 +64,17 @@ export function AssistantPanel() {
   };
 
   return (
-    <div className="bg-[#FAFAF8] w-80 lg:w-96 flex flex-col h-full border-l border-[#201F1B]/15 font-sans">
+    <div className="bg-[#FAFAF8] dark:bg-[#1E1D1A] w-80 lg:w-96 flex flex-col h-full border-l border-[#201F1B]/15 dark:border-[#F4F4F0]/15 font-sans transition-colors">
       {/* Panel Header */}
-      <div className="p-3 border-b border-[#201F1B]/15 bg-[#FAFAF8] flex items-center justify-between">
+      <div className="p-3 border-b border-[#201F1B]/15 dark:border-[#F4F4F0]/15 bg-[#FAFAF8] dark:bg-[#1E1D1A] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-[#201F1B]" />
-          <h2 className="text-xs font-semibold text-[#201F1B] tracking-tight">AI Assistant</h2>
+          <Sparkles className="w-4 h-4 text-[#201F1B] dark:text-[#F4F4F0]" />
+          <h2 className="text-xs font-semibold text-[#201F1B] dark:text-[#F4F4F0] tracking-tight">AI Assistant</h2>
         </div>
 
         <button
           onClick={clearTimeline}
-          className="p-1 rounded text-[#201F1B]/60 hover:text-[#201F1B] hover:bg-[#201F1B]/5 transition-colors"
+          className="p-1 rounded text-[#201F1B]/60 dark:text-[#F4F4F0]/60 hover:text-[#201F1B] dark:hover:text-[#F4F4F0] hover:bg-[#201F1B]/5 transition-colors"
           title="Clear history"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -86,49 +86,49 @@ export function AssistantPanel() {
         {/* Preset Scenarios (Sentence Case Paper Cards) */}
         {actionTimeline.length === 0 && (
           <div className="space-y-3 font-sans">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-[#201F1B]/60">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-[#201F1B]/60 dark:text-[#F4F4F0]/60">
               Preset AI Commands
             </div>
 
             <div className="grid grid-cols-1 gap-2">
               <button
                 onClick={() => handleScenarioClick('Find emails from Sarah about Q3 report from last week')}
-                className="text-left p-2.5 rounded-md bg-[#FAFAF8] border border-[#201F1B]/15 hover:border-[#201F1B]/40 text-xs text-[#201F1B] transition-colors group font-sans"
+                className="text-left p-2.5 rounded-md bg-[#FAFAF8] dark:bg-[#1E1D1A] border border-[#201F1B]/15 dark:border-[#F4F4F0]/15 hover:border-[#201F1B]/40 dark:hover:border-[#F4F4F0]/40 text-xs text-[#201F1B] dark:text-[#F4F4F0] transition-colors group font-sans"
               >
-                <div className="font-medium text-[#201F1B]">Search by sender & date</div>
-                <div className="text-[11px] text-[#201F1B]/60 mt-0.5">Find emails from Sarah about Q3 report from last week</div>
+                <div className="font-medium text-[#201F1B] dark:text-[#F4F4F0]">Search by sender & date</div>
+                <div className="text-[11px] text-[#201F1B]/60 dark:text-[#F4F4F0]/60 mt-0.5">Find emails from Sarah about Q3 report from last week</div>
               </button>
 
               <button
                 onClick={() => handleScenarioClick('Find all unread emails')}
-                className="text-left p-2.5 rounded-md bg-[#FAFAF8] border border-[#201F1B]/15 hover:border-[#201F1B]/40 text-xs text-[#201F1B] transition-colors group font-sans"
+                className="text-left p-2.5 rounded-md bg-[#FAFAF8] dark:bg-[#1E1D1A] border border-[#201F1B]/15 dark:border-[#F4F4F0]/15 hover:border-[#201F1B]/40 dark:hover:border-[#F4F4F0]/40 text-xs text-[#201F1B] dark:text-[#F4F4F0] transition-colors group font-sans"
               >
-                <div className="font-medium text-[#201F1B]">Filter unread</div>
-                <div className="text-[11px] text-[#201F1B]/60 mt-0.5">Find all unread emails</div>
+                <div className="font-medium text-[#201F1B] dark:text-[#F4F4F0]">Filter unread</div>
+                <div className="text-[11px] text-[#201F1B]/60 dark:text-[#F4F4F0]/60 mt-0.5">Find all unread emails</div>
               </button>
 
               <button
                 onClick={() => handleScenarioClick('Draft a reply to the latest email saying "I will review this tomorrow"')}
-                className="text-left p-2.5 rounded-md bg-[#FAFAF8] border border-[#201F1B]/15 hover:border-[#201F1B]/40 text-xs text-[#201F1B] transition-colors group font-sans"
+                className="text-left p-2.5 rounded-md bg-[#FAFAF8] dark:bg-[#1E1D1A] border border-[#201F1B]/15 dark:border-[#F4F4F0]/15 hover:border-[#201F1B]/40 dark:hover:border-[#F4F4F0]/40 text-xs text-[#201F1B] dark:text-[#F4F4F0] transition-colors group font-sans"
               >
-                <div className="font-medium text-[#201F1B]">Populate compose modal</div>
-                <div className="text-[11px] text-[#201F1B]/60 mt-0.5">Draft a reply saying "I will review this tomorrow"</div>
+                <div className="font-medium text-[#201F1B] dark:text-[#F4F4F0]">Populate compose modal</div>
+                <div className="text-[11px] text-[#201F1B]/60 dark:text-[#F4F4F0]/60 mt-0.5">Draft a reply saying "I will review this tomorrow"</div>
               </button>
 
               <button
                 onClick={() => handleScenarioClick('Send an email to alex@example.com with subject "Project Update" and body "All deliverables are ready for review."')}
-                className="text-left p-2.5 rounded-md bg-[#FAFAF8] border border-[#201F1B]/15 hover:border-[#201F1B]/40 text-xs text-[#201F1B] transition-colors group font-sans"
+                className="text-left p-2.5 rounded-md bg-[#FAFAF8] dark:bg-[#1E1D1A] border border-[#201F1B]/15 dark:border-[#F4F4F0]/15 hover:border-[#201F1B]/40 dark:hover:border-[#F4F4F0]/40 text-xs text-[#201F1B] dark:text-[#F4F4F0] transition-colors group font-sans"
               >
-                <div className="font-medium text-[#201F1B]">Send email with confirmation</div>
-                <div className="text-[11px] text-[#201F1B]/60 mt-0.5">Send email to alex@example.com</div>
+                <div className="font-medium text-[#201F1B] dark:text-[#F4F4F0]">Send email with confirmation</div>
+                <div className="text-[11px] text-[#201F1B]/60 dark:text-[#F4F4F0]/60 mt-0.5">Send email to alex@example.com</div>
               </button>
 
               <button
                 onClick={() => handleScenarioClick('Search emails about invoice and reply to the sender with "Received, thanks!"')}
-                className="text-left p-2.5 rounded-md bg-[#FAFAF8] border border-[#201F1B]/15 hover:border-[#201F1B]/40 text-xs text-[#201F1B] transition-colors group font-sans"
+                className="text-left p-2.5 rounded-md bg-[#FAFAF8] dark:bg-[#1E1D1A] border border-[#201F1B]/15 dark:border-[#F4F4F0]/15 hover:border-[#201F1B]/40 dark:hover:border-[#F4F4F0]/40 text-xs text-[#201F1B] dark:text-[#F4F4F0] transition-colors group font-sans"
               >
-                <div className="font-medium text-[#201F1B]">Multi-step tool chain</div>
-                <div className="text-[11px] text-[#201F1B]/60 mt-0.5">Search emails about invoice and reply to sender</div>
+                <div className="font-medium text-[#201F1B] dark:text-[#F4F4F0]">Multi-step tool chain</div>
+                <div className="text-[11px] text-[#201F1B]/60 dark:text-[#F4F4F0]/60 mt-0.5">Search emails about invoice and reply to sender</div>
               </button>
             </div>
           </div>
@@ -145,29 +145,29 @@ export function AssistantPanel() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-3 rounded-md bg-[#FAFAF8] border border-[#201F1B]/15 flex items-center gap-2.5 text-xs text-[#201F1B]/60 font-sans"
+            className="p-3 rounded-md bg-[#FAFAF8] dark:bg-[#1E1D1A] border border-[#201F1B]/15 dark:border-[#F4F4F0]/15 flex items-center gap-2.5 text-xs text-[#201F1B]/60 dark:text-[#F4F4F0]/60 font-sans"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#201F1B] animate-spin" />
+            <Sparkles className="w-3.5 h-3.5 text-[#201F1B] dark:text-[#F4F4F0] animate-spin" />
             Evaluating tool call trajectory...
           </motion.div>
         )}
       </div>
 
       {/* Bottom Command Bar */}
-      <div className="p-3 border-t border-[#201F1B]/15 bg-[#FAFAF8] font-sans">
+      <div className="p-3 border-t border-[#201F1B]/15 dark:border-[#F4F4F0]/15 bg-[#FAFAF8] dark:bg-[#1E1D1A] font-sans">
         <form onSubmit={handleSubmit} className="relative flex items-center">
           <input
             type="text"
             placeholder="Command assistant..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="w-full pl-3 pr-8 py-1.5 bg-transparent border-b border-[#201F1B]/15 text-xs text-[#201F1B] placeholder-[#201F1B]/60 focus:border-[#201F1B]/40 focus:outline-none transition-colors font-sans"
+            className="w-full pl-3 pr-8 py-1.5 bg-transparent border-b border-[#201F1B]/15 dark:border-[#F4F4F0]/15 text-xs text-[#201F1B] dark:text-[#F4F4F0] placeholder-[#201F1B]/60 dark:placeholder-[#F4F4F0]/60 focus:border-[#201F1B]/40 dark:focus:border-[#F4F4F0]/40 focus:outline-none transition-colors font-sans"
             disabled={isAIExecuting}
           />
           <button
             type="submit"
             disabled={isAIExecuting || !prompt.trim()}
-            className="absolute right-0 p-1 text-[#201F1B] disabled:opacity-40 transition-opacity"
+            className="absolute right-0 p-1 text-[#201F1B] dark:text-[#F4F4F0] disabled:opacity-40 transition-opacity"
           >
             <Send className="w-3.5 h-3.5" />
           </button>
@@ -176,3 +176,4 @@ export function AssistantPanel() {
     </div>
   );
 }
+
