@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { syncUserMessagesToCache } from '@/lib/gmail/messages';
+import { syncGmailHistory } from '@/lib/gmail/messages';
 import { broadcastSyncEvent } from '../sse-emitter';
+import { db } from '@/lib/db/prisma';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +20,14 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Pub/Sub Webhook] Received notification for ${emailAddress}, historyId: ${historyId}`);
 
+    // Lookup user by email and trigger incremental history sync
+    if (emailAddress) {
+      const user = await db.user.findUnique({ where: { email: emailAddress } });
+      if (user) {
+        await syncGmailHistory(user.id, String(historyId));
+      }
+    }
+
     // Broadcast SSE update to active clients
     broadcastSyncEvent({
       type: 'INBOX_UPDATED',
@@ -33,3 +42,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

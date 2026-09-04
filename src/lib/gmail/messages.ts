@@ -328,3 +328,146 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     labels: typeof created.labels === 'string' ? created.labels.split(',') : (created.labels as any) || [],
   };
 }
+
+export async function syncGmailHistory(userId: string, targetHistoryId?: string): Promise<boolean> {
+  try {
+    const syncState = await db.syncState.findUnique({ where: { userId } });
+    const startHistoryId = syncState?.historyId;
+
+    if (!startHistoryId) {
+      await syncUserMessagesToCache(userId);
+      return true;
+    }
+
+    const gmail = await getAuthenticatedGmailClient(userId);
+
+    const historyRes = await gmail.users.history.list({
+      userId: 'me',
+      startHistoryId,
+      historyTypes: ['messageAdded', 'labelAdded', 'labelRemoved'],
+    });
+
+    const historyRecords = historyRes.data.history || [];
+
+    for (const record of historyRecords) {
+      if (record.messagesAdded) {
+        for (const msgAdded of record.messagesAdded) {
+          if (!msgAdded.message?.id) continue;
+          const fullMsg = await gmail.users.messages.get({
+            userId: 'me',
+            id: msgAdded.message.id,
+            format: 'full',
+          });
+          const parsed = parseGmailMessage(fullMsg.data);
+          const labelsStr = Array.isArray(parsed.labels) ? parsed.labels.join(',') : parsed.labels || 'INBOX';
+
+          await db.thread.upsert({
+            where: { gmailThreadId: parsed.threadId },
+            update: {
+              subject: parsed.subject,
+              snippet: parsed.snippet,
+              participantSummary: parsed.senderName || parsed.sender,
+              updatedAt: new Date(parsed.receivedAt),
+            },
+            create: {
+              userId,
+              gmailThreadId: parsed.threadId,
+              subject: parsed.subject,
+              snippet: parsed.snippet,
+              participantSummary: parsed.senderName || parsed.sender,
+              updatedAt: new Date(parsed.receivedAt),
+            },
+          });
+
+          await db.emailCache.upsert({
+            where: { gmailMessageId: parsed.gmailMessageId },
+            update: {
+              sender: parsed.sender,
+              recipient: parsed.recipient,
+              subject: parsed.subject,
+              snippet: parsed.snippet,
+              bodyText: parsed.bodyText,
+              bodyHtml: parsed.bodyHtml,
+              receivedAt: new Date(parsed.receivedAt),
+              isRead: parsed.isRead,
+              isSent: parsed.isSent,
+              labels: labelsStr,
+            },
+            create: {
+              userId,
+              gmailMessageId: parsed.gmailMessageId,
+              threadId: parsed.threadId,
+              sender: parsed.sender,
+              recipient: parsed.recipient,
+              subject: parsed.subject,
+              snippet: parsed.snippet,
+              bodyText: parsed.bodyText,
+              bodyHtml: parsed.bodyHtml,
+              receivedAt: new Date(parsed.receivedAt),
+              isRead: parsed.isRead,
+              isSent: parsed.isSent,
+              labels: labelsStr,
+            },
+          });
+        }
+      }
+    }
+
+    const newHistoryId = targetHistoryId || historyRes.data.historyId || startHistoryId;
+    await db.syncState.upsert({
+      where: { userId },
+      update: { historyId: newHistoryId, lastSyncedAt: new Date() },
+      create: { userId, historyId: newHistoryId },
+    });
+
+    return true;
+  } catch (error) {
+    console.warn('[syncGmailHistory] Fallback to full sync due to error:', error);
+    await syncUserMessagesToCache(userId);
+    return false;
+  }
+}
+
+export async function renewGmailWatchIfNeeded(userId: string): Promise<void> {
+  try {
+    const syncState = await db.syncState.findUnique({ where: { userId } });
+    const now = new Date();
+    const needsRenewal =
+      !syncState?.watchExpiration ||
+      syncState.watchExpiration.getTime() - now.getTime() < 24 * 60 * 60 * 1000;
+
+    if (needsRenewal) {
+      const topicName = process.env.GCP_PUBSUB_TOPIC || 'projects/nebula-mail/topics/gmail-notifications';
+      const gmail = await getAuthenticatedGmailClient(userId);
+      const watchRes = await gmail.users.watch({
+        userId: 'me',
+        requestBody: {
+          topicName,
+          labelIds: ['INBOX'],
+        },
+      });
+
+      const historyId = watchRes.data.historyId || syncState?.historyId || '1000';
+      const expiration = watchRes.data.expiration
+        ? new Date(parseInt(watchRes.data.expiration))
+        : new Date(Date.now() + 7 * 24 * 3600 * 1000);
+
+      await db.syncState.upsert({
+        where: { userId },
+        update: {
+          historyId,
+          watchExpiration: expiration,
+          lastSyncedAt: new Date(),
+        },
+        create: {
+          userId,
+          historyId,
+          watchExpiration: expiration,
+        },
+      });
+    }
+  } catch (error: any) {
+    console.warn(`[Watch Renewal] Skipped/fallback for ${userId}:`, error.message);
+  }
+}
+
