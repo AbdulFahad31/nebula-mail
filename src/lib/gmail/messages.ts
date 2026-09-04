@@ -182,9 +182,13 @@ export async function getEmailsFromCache(
   const oauthAccount = await db.oAuthAccount.findUnique({ where: { userId } });
   const count = await db.emailCache.count({ where: { userId } });
 
-  // Only seed demo cache if user has NO connected OAuth account AND email cache is empty
-  if (!oauthAccount && count === 0) {
-    await seedDemoCache(userId);
+  // If cache is empty for this user, trigger sync (if connected to Gmail) or fallback demo seed
+  if (count === 0) {
+    if (oauthAccount) {
+      await syncUserMessagesToCache(userId);
+    } else {
+      await seedDemoCache(userId);
+    }
   }
 
   const whereClause: any = { userId };
