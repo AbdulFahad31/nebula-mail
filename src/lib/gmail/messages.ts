@@ -99,20 +99,22 @@ export async function seedDemoCache(userId: string): Promise<EmailMessage[]> {
       update: {},
       create: {
         id: userId,
-        email: `${userId}@nebulamail.app`,
+        email: userId.includes('@') ? userId : `${userId}@nebulamail.app`,
         name: 'Nebula User',
       },
     });
 
     for (const email of INITIAL_MOCK_EMAILS) {
       const labelsStr = Array.isArray(email.labels) ? email.labels.join(',') : email.labels || 'INBOX';
+      const userThreadId = `${email.threadId}_${userId}`;
+      const userMsgId = `${email.gmailMessageId}_${userId}`;
 
       await db.thread.upsert({
-        where: { gmailThreadId: email.threadId },
+        where: { gmailThreadId: userThreadId },
         update: {},
         create: {
           userId,
-          gmailThreadId: email.threadId,
+          gmailThreadId: userThreadId,
           subject: email.subject,
           snippet: email.snippet,
           participantSummary: email.senderName || email.sender,
@@ -120,11 +122,13 @@ export async function seedDemoCache(userId: string): Promise<EmailMessage[]> {
         },
       });
 
-      await db.emailCache.create({
-        data: {
+      await db.emailCache.upsert({
+        where: { gmailMessageId: userMsgId },
+        update: {},
+        create: {
           userId,
-          gmailMessageId: email.gmailMessageId,
-          threadId: email.threadId,
+          gmailMessageId: userMsgId,
+          threadId: userThreadId,
           sender: email.sender,
           recipient: email.recipient,
           subject: email.subject,
