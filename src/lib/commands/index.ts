@@ -145,6 +145,51 @@ export async function commandPopulateCompose(params: {
   return { success: true };
 }
 
+/**
+ * Execute email send directly & refresh inbox/sent list
+ */
+export async function executeSendEmailDirect(to: string[], subject: string, body: string, threadId?: string) {
+  const store = useMailStore.getState();
+  const stepId = store.addTimelineStep('Sending email', `To: ${to.join(', ')} | Subject: ${subject}`);
+
+  try {
+    const res = await fetch('/api/mail/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to,
+        subject,
+        body,
+        threadId,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      store.closeComposeModal();
+      store.clearAllFilters(); // Clear active search keyword filter so sent email is visible!
+      store.setActiveView('sent'); // Switch to sent view
+
+      // Fetch fresh email list
+      const listRes = await fetch('/api/mail/list?view=sent');
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        store.setEmails(listData.emails || []);
+      }
+
+      store.updateTimelineStep(stepId, 'completed', 'Email sent & list updated');
+      return { success: true, email: data.email };
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      store.updateTimelineStep(stepId, 'failed', errData.error || 'Send request failed');
+      return { success: false, error: errData.error || 'Send request failed' };
+    }
+  } catch (err: any) {
+    store.updateTimelineStep(stepId, 'failed', err.message || 'Send error');
+    return { success: false, error: err.message };
+  }
+}
+
 export async function commandSendEmail(params: { composeDraftId: string }) {
   const store = useMailStore.getState();
   const draft = store.composeState;
@@ -161,32 +206,9 @@ export async function commandSendEmail(params: { composeDraftId: string }) {
         body: draft.body,
       },
       onConfirm: async () => {
-        const stepId = store.addTimelineStep('Executing send email');
-        try {
-          const res = await fetch('/api/mail/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: draft.to,
-              subject: draft.subject,
-              body: draft.body,
-              threadId: draft.threadId,
-            }),
-          });
-
-          if (res.ok) {
-            store.closeComposeModal();
-            store.setConfirmationCard(null);
-            store.updateTimelineStep(stepId, 'completed', 'Email successfully sent');
-            resolve({ success: true, requiresConfirmation: false });
-          } else {
-            store.updateTimelineStep(stepId, 'failed', 'Send API failed');
-            resolve({ success: false, requiresConfirmation: false });
-          }
-        } catch (err: any) {
-          store.updateTimelineStep(stepId, 'failed', err.message);
-          resolve({ success: false, requiresConfirmation: false });
-        }
+        const result = await executeSendEmailDirect(draft.to, draft.subject, draft.body, draft.threadId);
+        store.setConfirmationCard(null);
+        resolve({ success: result.success, requiresConfirmation: false });
       },
       onCancel: () => {
         store.setConfirmationCard(null);
@@ -199,7 +221,6 @@ export async function commandSendEmail(params: { composeDraftId: string }) {
 export async function commandReplyEmail(params: { messageId?: string; body: string }) {
   const store = useMailStore.getState();
 
-  // Context-aware message lookup: use params.messageId or active open email
   const targetId = params.messageId || store.selectedEmailId;
   const targetEmail = store.emails.find((e) => e.id === targetId || e.gmailMessageId === targetId);
 
@@ -212,7 +233,6 @@ export async function commandReplyEmail(params: { messageId?: string; body: stri
     ? targetEmail.subject
     : `Re: ${targetEmail.subject}`;
 
-  // Pre-fill compose drawer visibly
   store.openComposeModal();
   store.setComposeState({
     to: replyTo,
@@ -236,32 +256,9 @@ export async function commandReplyEmail(params: { messageId?: string; body: stri
         threadId: targetEmail.threadId,
       },
       onConfirm: async () => {
-        const stepId = store.addTimelineStep('Executing reply to email');
-        try {
-          const res = await fetch('/api/mail/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: replyTo,
-              subject: replySubject,
-              body: params.body,
-              threadId: targetEmail.threadId,
-            }),
-          });
-
-          if (res.ok) {
-            store.closeComposeModal();
-            store.setConfirmationCard(null);
-            store.updateTimelineStep(stepId, 'completed', 'Reply sent successfully');
-            resolve({ success: true, requiresConfirmation: false });
-          } else {
-            store.updateTimelineStep(stepId, 'failed', 'Reply failed');
-            resolve({ success: false, requiresConfirmation: false });
-          }
-        } catch (err: any) {
-          store.updateTimelineStep(stepId, 'failed', err.message);
-          resolve({ success: false, requiresConfirmation: false });
-        }
+        const result = await executeSendEmailDirect(replyTo, replySubject, params.body, targetEmail.threadId);
+        store.setConfirmationCard(null);
+        resolve({ success: result.success, requiresConfirmation: false });
       },
       onCancel: () => {
         store.setConfirmationCard(null);

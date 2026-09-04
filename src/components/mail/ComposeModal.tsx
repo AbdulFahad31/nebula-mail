@@ -1,25 +1,48 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
 import { X, Send, Paperclip, Mail } from 'lucide-react';
-import { commandSendEmail } from '@/lib/commands';
+import { executeSendEmailDirect } from '@/lib/commands';
 
 export function ComposeModal() {
   const { composeState, setComposeState, closeComposeModal } = useMailStore();
+  const [toInput, setToInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    setToInput(composeState.to.join(', '));
+  }, [composeState.to]);
 
   if (!composeState.isOpen) return null;
 
-  const toValue = composeState.to.join(', ');
-
   const handleToChange = (val: string) => {
+    setToInput(val);
     const addresses = val.split(',').map((s) => s.trim()).filter(Boolean);
     setComposeState({ to: addresses });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    commandSendEmail({ composeDraftId: composeState.draftId });
+    if (isSending) return;
+
+    const addresses = toInput.split(',').map((s) => s.trim()).filter(Boolean);
+    if (addresses.length === 0) {
+      alert('Please enter at least one recipient email address');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      await executeSendEmailDirect(
+        addresses,
+        composeState.subject,
+        composeState.body,
+        composeState.threadId
+      );
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -45,7 +68,7 @@ export function ComposeModal() {
           <input
             type="text"
             placeholder="recipient@example.com"
-            value={toValue}
+            value={toInput}
             onChange={(e) => handleToChange(e.target.value)}
             className="flex-1 bg-transparent text-xs text-[#201F1B] placeholder-[#201F1B]/60 focus:outline-none font-sans"
             required
@@ -84,10 +107,11 @@ export function ComposeModal() {
 
           <button
             type="submit"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#24463A] hover:bg-[#1C372E] text-[#FAFAF8] font-medium text-xs transition-colors font-sans"
+            disabled={isSending}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#24463A] hover:bg-[#1C372E] text-[#FAFAF8] font-medium text-xs transition-colors font-sans disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
-            Send
+            {isSending ? 'Sending...' : 'Send'}
           </button>
         </div>
       </form>
