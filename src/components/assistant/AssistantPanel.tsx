@@ -6,9 +6,10 @@ import { ActionTimeline } from './ActionTimeline';
 import { ConfirmationCard } from './ConfirmationCard';
 import { Sparkles, Send, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { executeClientAIToolCall } from '@/lib/commands';
 
 export function AssistantPanel() {
-  const { actionTimeline, isAIExecuting, addTimelineStep, clearTimeline } = useMailStore();
+  const { actionTimeline, isAIExecuting, addTimelineStep, updateTimelineStep, clearTimeline, setIsAIExecuting, selectedEmailId } = useMailStore();
   const [prompt, setPrompt] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -25,20 +26,36 @@ export function AssistantPanel() {
     const userQuery = prompt.trim();
     setPrompt('');
 
-    addTimelineStep('User Query', userQuery);
+    setIsAIExecuting(true);
+    const stepId = addTimelineStep('User Query', userQuery);
 
     try {
       const response = await fetch('/api/assistant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userQuery }),
+        body: JSON.stringify({ prompt: userQuery, currentOpenEmailId: selectedEmailId }),
       });
 
       if (!response.ok) {
-        throw new Error('Assistant processing failed');
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Assistant processing failed');
+      }
+
+      const data = await response.json();
+      updateTimelineStep(stepId, 'completed', userQuery);
+
+      // Execute AI tool calls in the browser React environment so UI state updates!
+      if (data.toolCalls && Array.isArray(data.toolCalls)) {
+        for (const tc of data.toolCalls) {
+          if (tc.name) {
+            await executeClientAIToolCall(tc.name, tc.args);
+          }
+        }
       }
     } catch (err: any) {
-      addTimelineStep('Assistant Execution Error', err.message || 'Unknown error occurred');
+      updateTimelineStep(stepId, 'failed', err.message || 'Unknown error occurred');
+    } finally {
+      setIsAIExecuting(false);
     }
   };
 
