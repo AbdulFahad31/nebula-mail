@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
-import { X, Send, Paperclip, Sparkles } from 'lucide-react';
+import { X, Send, Paperclip, Mail } from 'lucide-react';
 import { commandSendEmail } from '@/lib/commands';
 
 export function ComposeModal() {
@@ -23,71 +23,71 @@ export function ComposeModal() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200 animate-in slide-in-from-bottom-5">
+    <div className="fixed bottom-4 right-4 z-50 w-full max-w-lg bg-[#FAFAF8] border border-[#201F1B]/15 rounded-md shadow-sm overflow-hidden flex flex-col transition-all duration-150 animate-in slide-in-from-bottom-3 font-sans">
       {/* Header */}
-      <div className="px-4 py-3 bg-slate-800/80 border-b border-slate-700/80 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
+      <div className="px-3.5 py-2 bg-[#FAFAF8] border-b border-[#201F1B]/15 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#201F1B]">
+          <Mail className="w-3.5 h-3.5 text-[#24463A]" />
           New Message
         </div>
         <button
           onClick={closeComposeModal}
-          className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors"
+          className="p-1 rounded text-[#201F1B]/60 hover:text-[#201F1B] hover:bg-[#201F1B]/5 transition-colors"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Form fields */}
-      <form onSubmit={handleSubmit} className="p-4 space-y-3 flex-1 flex flex-col">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-          <span className="text-xs font-medium text-slate-400 w-12">To:</span>
+      {/* Form Fields */}
+      <form onSubmit={handleSubmit} className="p-3.5 space-y-2.5 flex-1 flex flex-col font-sans">
+        <div className="flex items-center gap-2 border-b border-[#201F1B]/15 pb-2">
+          <span className="text-xs font-medium text-[#201F1B]/60 w-12 font-sans">To:</span>
           <input
             type="text"
             placeholder="recipient@example.com"
             value={toValue}
             onChange={(e) => handleToChange(e.target.value)}
-            className="flex-1 bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
+            className="flex-1 bg-transparent text-xs text-[#201F1B] placeholder-[#201F1B]/60 focus:outline-none font-sans"
             required
           />
         </div>
 
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-          <span className="text-xs font-medium text-slate-400 w-12">Subject:</span>
+        <div className="flex items-center gap-2 border-b border-[#201F1B]/15 pb-2">
+          <span className="text-xs font-medium text-[#201F1B]/60 w-12 font-sans">Subject:</span>
           <input
             type="text"
             placeholder="Subject line"
             value={composeState.subject}
             onChange={(e) => setComposeState({ subject: e.target.value })}
-            className="flex-1 bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
+            className="flex-1 bg-transparent text-xs text-[#201F1B] placeholder-[#201F1B]/60 focus:outline-none font-serif-display font-semibold"
             required
           />
         </div>
 
         <textarea
           rows={7}
-          placeholder="Write your email body..."
+          placeholder="Write message content..."
           value={composeState.body}
           onChange={(e) => setComposeState({ body: e.target.value })}
-          className="w-full bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 resize-none font-sans"
+          className="w-full bg-[#FAFAF8] p-2.5 rounded-md border border-[#201F1B]/15 text-xs text-[#201F1B] placeholder-[#201F1B]/60 focus:outline-none focus:border-[#201F1B]/40 resize-none font-sans"
           required
         />
 
-        <div className="pt-2 flex items-center justify-between">
+        <div className="pt-1 flex items-center justify-between">
           <button
             type="button"
-            className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-1.5 text-[#201F1B]/60 hover:text-[#201F1B] hover:bg-[#201F1B]/5 rounded transition-colors"
             title="Attach file"
           >
-            <Paperclip className="w-4 h-4" />
+            <Paperclip className="w-3.5 h-3.5" />
           </button>
 
           <button
             type="submit"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#24463A] hover:bg-[#1C372E] text-[#FAFAF8] font-medium text-xs transition-colors font-sans"
           >
             <Send className="w-3.5 h-3.5" />
-            Send Email
+            Send
           </button>
         </div>
       </form>

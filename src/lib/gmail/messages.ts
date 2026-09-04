@@ -28,6 +28,8 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
       const parsed = parseGmailMessage(fullMsg.data);
       parsedEmails.push(parsed);
 
+      const labelsStr = Array.isArray(parsed.labels) ? parsed.labels.join(',') : parsed.labels || 'INBOX';
+
       // Ensure Thread exists in DB
       await db.thread.upsert({
         where: { gmailThreadId: parsed.threadId },
@@ -60,7 +62,7 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
           receivedAt: new Date(parsed.receivedAt),
           isRead: parsed.isRead,
           isSent: parsed.isSent,
-          labels: parsed.labels,
+          labels: labelsStr,
         },
         create: {
           userId,
@@ -75,7 +77,7 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
           receivedAt: new Date(parsed.receivedAt),
           isRead: parsed.isRead,
           isSent: parsed.isSent,
-          labels: parsed.labels,
+          labels: labelsStr,
         },
       });
     }
@@ -91,7 +93,20 @@ export async function seedDemoCache(userId: string): Promise<EmailMessage[]> {
   const existingCount = await db.emailCache.count({ where: { userId } });
 
   if (existingCount === 0) {
+    // Ensure User record exists to satisfy foreign key constraints
+    await db.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: {
+        id: userId,
+        email: `${userId}@nebulamail.app`,
+        name: 'Nebula User',
+      },
+    });
+
     for (const email of INITIAL_MOCK_EMAILS) {
+      const labelsStr = Array.isArray(email.labels) ? email.labels.join(',') : email.labels || 'INBOX';
+
       await db.thread.upsert({
         where: { gmailThreadId: email.threadId },
         update: {},
@@ -119,7 +134,7 @@ export async function seedDemoCache(userId: string): Promise<EmailMessage[]> {
           receivedAt: new Date(email.receivedAt),
           isRead: email.isRead,
           isSent: email.isSent,
-          labels: email.labels,
+          labels: labelsStr,
         },
       });
     }
@@ -145,7 +160,7 @@ export async function seedDemoCache(userId: string): Promise<EmailMessage[]> {
     receivedAt: c.receivedAt.toISOString(),
     isRead: c.isRead,
     isSent: c.isSent,
-    labels: c.labels,
+    labels: typeof c.labels === 'string' ? c.labels.split(',') : (c.labels as any) || [],
   }));
 }
 
@@ -169,14 +184,14 @@ export async function getEmailsFromCache(
   }
 
   if (filters.sender) {
-    whereClause.sender = { contains: filters.sender, mode: 'insensitive' };
+    whereClause.sender = { contains: filters.sender };
   }
 
   if (filters.keyword) {
     whereClause.OR = [
-      { subject: { contains: filters.keyword, mode: 'insensitive' } },
-      { snippet: { contains: filters.keyword, mode: 'insensitive' } },
-      { bodyText: { contains: filters.keyword, mode: 'insensitive' } },
+      { subject: { contains: filters.keyword } },
+      { snippet: { contains: filters.keyword } },
+      { bodyText: { contains: filters.keyword } },
     ];
   }
 
@@ -210,7 +225,7 @@ export async function getEmailsFromCache(
     receivedAt: c.receivedAt.toISOString(),
     isRead: c.isRead,
     isSent: c.isSent,
-    labels: c.labels,
+    labels: typeof c.labels === 'string' ? c.labels.split(',') : (c.labels as any) || [],
   }));
 }
 
@@ -280,7 +295,7 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
       receivedAt: new Date(),
       isRead: true,
       isSent: true,
-      labels: ['SENT'],
+      labels: 'SENT',
     },
   });
 
@@ -299,6 +314,6 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     receivedAt: created.receivedAt.toISOString(),
     isRead: created.isRead,
     isSent: created.isSent,
-    labels: created.labels,
+    labels: typeof created.labels === 'string' ? created.labels.split(',') : (created.labels as any) || [],
   };
 }

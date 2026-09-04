@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
-import { AlertCircle, Send, Check, X, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function ConfirmationCard() {
@@ -22,52 +22,52 @@ export function ConfirmationCard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="p-4 bg-cyan-950/60 border border-cyan-500/40 rounded-xl space-y-3 shadow-lg shadow-cyan-950/50"
+      className="p-3.5 bg-[#FAFAF8] border border-[#201F1B]/15 rounded-md space-y-2.5 text-xs font-sans shadow-sm"
     >
-      <div className="flex items-center gap-2 text-cyan-300 font-semibold text-xs">
-        <AlertCircle className="w-4 h-4 text-cyan-400" />
-        Human Confirmation Required
+      <div className="flex items-center gap-1.5 text-[#201F1B] font-medium text-xs">
+        <AlertCircle className="w-4 h-4 text-[#24463A] shrink-0" />
+        <span>Authorization required</span>
       </div>
 
-      <div className="text-xs text-slate-200 font-medium leading-relaxed">
+      <div className="text-xs text-[#201F1B] font-medium leading-relaxed">
         {confirmationCard.summary}
       </div>
 
       {/* Payload Preview Card */}
-      <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800 text-xs space-y-1 font-mono">
+      <div className="p-2.5 bg-[#FAFAF8] rounded-md border border-[#201F1B]/15 text-xs space-y-1 font-sans">
         <div>
-          <span className="text-slate-500">To:</span>{' '}
-          <span className="text-slate-300">{confirmationCard.payload.to.join(', ')}</span>
+          <span className="text-[#201F1B]/60">To:</span>{' '}
+          <span className="text-[#201F1B] font-medium">{confirmationCard.payload.to.join(', ')}</span>
         </div>
         <div>
-          <span className="text-slate-500">Subject:</span>{' '}
-          <span className="text-slate-300">{confirmationCard.payload.subject}</span>
+          <span className="text-[#201F1B]/60">Subject:</span>{' '}
+          <span className="text-[#201F1B] font-serif-display font-semibold">{confirmationCard.payload.subject}</span>
         </div>
-        <div className="text-slate-400 line-clamp-2 pt-1 border-t border-slate-900 font-sans italic">
+        <div className="text-[#201F1B]/60 line-clamp-2 pt-1 border-t border-[#201F1B]/15 italic font-sans">
           "{confirmationCard.payload.body}"
         </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-2 pt-0.5 font-sans">
         <button
           onClick={handleConfirm}
           disabled={isExecuting}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 px-3 rounded-md bg-[#24463A] hover:bg-[#1C372E] text-[#FAFAF8] font-medium text-xs transition-colors disabled:opacity-50 font-sans"
         >
           {isExecuting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <Check className="w-3.5 h-3.5" />
           )}
-          Confirm & Send
+          Authorize & send
         </button>
 
         <button
           onClick={confirmationCard.onCancel}
           disabled={isExecuting}
-          className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs border border-slate-700 transition-all"
+          className="px-3 py-1.5 rounded-md bg-[#FAFAF8] hover:bg-[#201F1B]/5 text-[#201F1B] font-medium text-xs border border-[#201F1B]/15 transition-colors font-sans"
         >
           Cancel
         </button>

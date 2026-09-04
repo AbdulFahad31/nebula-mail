@@ -37,27 +37,27 @@ export default function InboxPage() {
   }, [setEmails]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-950 text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#FAFAF8] text-[#201F1B] selection:bg-[#24463A]/15 selection:text-[#24463A] font-sans">
       {/* App Navbar */}
       <Navbar />
 
-      {/* Main 3-Column Layout */}
+      {/* Main 3-Pane Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Column 1: Inbox List & Filters (fixed width) */}
+        {/* Pane 1: Inbox List & Search Filters */}
         <div className="w-80 md:w-96 h-full shrink-0">
           <InboxList />
         </div>
 
-        {/* Column 2: Selected Email Detail View (flexible fill) */}
+        {/* Pane 2: Reading View */}
         <div className="flex-1 h-full min-w-0">
           <EmailDetail />
         </div>
 
-        {/* Column 3: AI Assistant Controller Panel (fixed width) */}
+        {/* Pane 3: Native Assistant Inspector Pane */}
         <AssistantPanel />
       </div>
 
-      {/* Visibly Populated Compose Modal Drawer */}
+      {/* Compose Drawer Modal */}
       <ComposeModal />
     </div>
   );
