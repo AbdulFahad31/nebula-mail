@@ -103,7 +103,20 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 3: Person/topic search ("email from Sarah", "Q3", "John", "Alex")
+  // Scenario 3: Multi-step tool chain ("Search emails about invoice and reply to the sender with Received, thanks!")
+  if (p.includes('invoice') || (p.includes('search') && p.includes('reply'))) {
+    const replyText = prompt.match(/["']([^"']+)["']/)?.[1] || "Received, thanks!";
+    return NextResponse.json({
+      reply: `Searched invoice emails, opened correspondence, and prepared reply: "${replyText}".`,
+      toolCalls: [
+        { name: 'search_emails', args: { keyword: 'invoice' } },
+        { name: 'open_email', args: { messageId: 'msg_alex_03' } },
+        { name: 'reply_to_email', args: { messageId: 'msg_alex_03', body: replyText } },
+      ],
+    });
+  }
+
+  // Scenario 4: Person/topic search ("email from Sarah", "Q3", "John", "Alex")
   if (p.includes('sarah') || p.includes('project update') || p.includes('q3')) {
     return NextResponse.json({
       reply: `Found and opened latest email from Sarah regarding Q3 Nebula Project Update.`,
@@ -134,7 +147,7 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 4: Context-aware reply ("Reply that I'll handle it tomorrow")
+  // Scenario 5: Context-aware reply ("Reply that I'll handle it tomorrow")
   if (p.includes('reply')) {
     const replyText = p.includes('handle it tomorrow')
       ? "I'll handle it tomorrow."
@@ -146,7 +159,7 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 5: Natural language compound filter ("unread emails from this week")
+  // Scenario 6: Natural language compound filter ("unread emails from this week")
   if (p.includes('unread') || p.includes('this week')) {
     const d = new Date(today);
     d.setDate(d.getDate() - 7);

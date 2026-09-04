@@ -63,16 +63,16 @@ Sarah`,
     senderName: 'Alex Rivera',
     senderEmail: 'alex.rivera@techcorp.io',
     recipient: 'me@nebulamail.app',
-    subject: 'Security Audit & Compliance Signoff',
-    snippet: 'The external security audit for OAuth token encryption and Zod schemas has passed with zero critical findings.',
+    subject: 'Security Audit & Q3 Vendor Invoice Signoff',
+    snippet: 'The external security audit and Q3 vendor invoice have passed with zero critical findings.',
     bodyText: `Hello,
 
-The external security audit for OAuth token encryption and Zod schemas has passed with zero critical findings.
+The external security audit and Q3 vendor invoice have passed with zero critical findings.
 
 All refresh tokens are AES-256-GCM encrypted, and all API endpoints are validated against Zod schemas.
 
 Great work team!`,
-    bodyHtml: `<p>Hello,</p><p>The external security audit for OAuth token encryption and Zod schemas has passed with zero critical findings.</p><p>All refresh tokens are AES-256-GCM encrypted, and all API endpoints are validated against Zod schemas.</p><p>Great work team!</p>`,
+    bodyHtml: `<p>Hello,</p><p>The external security audit and Q3 vendor invoice have passed with zero critical findings.</p><p>All refresh tokens are AES-256-GCM encrypted, and all API endpoints are validated against Zod schemas.</p><p>Great work team!</p>`,
     receivedAt: daysAgo(5),
     isRead: false,
     isSent: false,
