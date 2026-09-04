@@ -168,11 +168,28 @@ export async function commandPopulateCompose(params: {
   return { success: true };
 }
 
+let isSendingLock = false;
+let lastSentHash = '';
+let lastSentTime = 0;
+
 /**
  * Execute email send directly & refresh inbox/sent list
  */
 export async function executeSendEmailDirect(to: string[], subject: string, body: string, threadId?: string) {
   const store = useMailStore.getState();
+  const payloadHash = `${to.join(',')}|${subject}|${body}`;
+  const now = Date.now();
+
+  // Deduplication guard: prevent sending identical email twice within 3 seconds or concurrent execution
+  if (isSendingLock || (payloadHash === lastSentHash && now - lastSentTime < 3000)) {
+    console.warn('[executeSendEmailDirect] Blocked duplicate email send request');
+    return { success: true };
+  }
+
+  isSendingLock = true;
+  lastSentHash = payloadHash;
+  lastSentTime = now;
+
   const stepId = store.addTimelineStep('Sending email', `To: ${to.join(', ')} | Subject: ${subject}`);
 
   try {
@@ -210,26 +227,40 @@ export async function executeSendEmailDirect(to: string[], subject: string, body
   } catch (err: any) {
     store.updateTimelineStep(stepId, 'failed', err.message || 'Send error');
     return { success: false, error: err.message };
+  } finally {
+    isSendingLock = false;
   }
 }
 
-export async function commandSendEmail(params: { composeDraftId: string }) {
+export async function commandSendEmail(params: {
+  composeDraftId?: string;
+  to?: string[];
+  subject?: string;
+  body?: string;
+}) {
   const store = useMailStore.getState();
-  const draft = store.composeState;
+  
+  // Close any open compose drawer so only the AI Authorization Card is active
+  store.closeComposeModal();
+
+  const to = (params.to && params.to.length > 0) ? params.to : store.composeState.to;
+  const subject = params.subject || store.composeState.subject;
+  const body = params.body || store.composeState.body;
+  const threadId = store.composeState.threadId;
 
   return new Promise<{ success: boolean; requiresConfirmation: boolean }>((resolve) => {
     store.setConfirmationCard({
       id: `conf_${Date.now()}`,
       type: 'send',
       title: 'Confirm Send Email',
-      summary: `Send email to ${draft.to.join(', ')} with subject "${draft.subject}"?`,
+      summary: `Send email to ${to.join(', ')} with subject "${subject}"?`,
       payload: {
-        to: draft.to,
-        subject: draft.subject,
-        body: draft.body,
+        to,
+        subject,
+        body,
       },
       onConfirm: async () => {
-        const result = await executeSendEmailDirect(draft.to, draft.subject, draft.body, draft.threadId);
+        const result = await executeSendEmailDirect(to, subject, body, threadId);
         store.setConfirmationCard(null);
         resolve({ success: result.success, requiresConfirmation: false });
       },

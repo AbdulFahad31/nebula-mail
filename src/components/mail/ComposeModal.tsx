@@ -59,7 +59,7 @@ export function ComposeModal() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.98 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="fixed bottom-4 right-4 z-50 w-full max-w-lg bg-[#1C1F24] border border-[#2A2D33] rounded-lg shadow-xl overflow-hidden flex flex-col font-sans transition-colors duration-150"
+        className="fixed bottom-4 right-4 md:right-[380px] z-40 w-full max-w-md bg-[#1C1F24] border border-[#2A2D33] rounded-lg shadow-2xl overflow-hidden flex flex-col font-sans transition-all duration-150"
       >
         {/* Header */}
         <div className="px-4 py-2.5 bg-[#1C1F24] border-b border-[#2A2D33] flex items-center justify-between">

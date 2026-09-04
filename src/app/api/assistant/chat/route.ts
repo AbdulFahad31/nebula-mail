@@ -103,9 +103,7 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     return NextResponse.json({
       reply: `Prepared email to ${to.join(', ')} with subject "${subject}".`,
       toolCalls: [
-        { name: 'open_compose', args: {} },
-        { name: 'populate_compose', args: { to, subject, body } },
-        { name: 'send_email', args: { composeDraftId: 'draft_active' } },
+        { name: 'send_email', args: { composeDraftId: 'draft_active', to, subject, body } },
       ],
     });
   }
