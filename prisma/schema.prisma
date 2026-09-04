@@ -1,0 +1,81 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String?
+  avatarUrl    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  oauthAccount OAuthAccount?
+  emailCaches  EmailCache[]
+  threads      Thread[]
+  syncState    SyncState?
+}
+
+model OAuthAccount {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  scope                 String
+  expiresAt             DateTime
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model EmailCache {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gmailMessageId String   @unique
+  threadId       String
+  thread         Thread   @relation(fields: [threadId], references: [gmailThreadId], onDelete: Cascade)
+  sender         String
+  recipient      String
+  subject        String
+  snippet        String
+  bodyText       String?  @db.Text
+  bodyHtml       String?  @db.Text
+  receivedAt     DateTime
+  isRead         Boolean  @default(false)
+  isSent         Boolean  @default(false)
+  labels         String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, receivedAt(sort: Desc)])
+  @@index([userId, isRead])
+  @@index([userId, isSent])
+}
+
+model Thread {
+  id                 String       @id @default(uuid())
+  userId             String
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gmailThreadId      String       @unique
+  subject            String
+  snippet            String
+  participantSummary String
+  updatedAt          DateTime     @updatedAt
+  emails             EmailCache[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+model SyncState {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  historyId       String
+  watchExpiration DateTime?
+  lastSyncedAt    DateTime  @default(now())
+}
