@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
 import { Reply, Forward, Trash2, RotateCcw } from 'lucide-react';
 import { commandDeleteEmail, commandRestoreEmail, commandPermanentlyDeleteEmail } from '@/lib/commands';
@@ -11,6 +11,18 @@ export function EmailDetail() {
   const selectedEmail = emails.find(
     e => e.id === selectedEmailId || e.gmailMessageId === selectedEmailId
   );
+
+  useEffect(() => {
+    if (selectedEmail && !selectedEmail.isRead) {
+      const updated = emails.map(e =>
+        e.id === selectedEmail.id || e.gmailMessageId === selectedEmail.gmailMessageId
+          ? { ...e, isRead: true }
+          : e
+      );
+      useMailStore.getState().setEmails(updated);
+      fetch(`/api/mail/${selectedEmail.id}`).catch(() => {});
+    }
+  }, [selectedEmail?.id, selectedEmail?.isRead]);
 
   if (!selectedEmail) {
     return (

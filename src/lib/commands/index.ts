@@ -78,45 +78,45 @@ export async function commandOpenEmail(params: { messageId: string }) {
     return idMatch || prefixMatch || senderMatch;
   });
 
-  // If email is already selected, return cleanly without duplicating timeline entries
-  if (existing && store.selectedEmailId === existing.id) {
+  const stepId = store.addTimelineStep('Opening email', `Target: ${params.messageId}`);
+
+  if (existing) {
+    store.setSelectedEmailId(existing.id);
+
+    // Mark as read in local state and trigger API update
+    if (!existing.isRead) {
+      const updated = store.emails.map((e) =>
+        e.id === existing.id || e.gmailMessageId === existing.gmailMessageId
+          ? { ...e, isRead: true }
+          : e
+      );
+      store.setEmails(updated);
+      fetch(`/api/mail/${existing.id}`).catch(() => {});
+    }
+
+    store.updateTimelineStep(stepId, 'completed', `Opened "${existing.subject}"`);
     return { success: true, email: existing };
   }
 
-  const stepId = store.addTimelineStep('Opening email', `Target: ${params.messageId}`);
+  // Fallback: select first email in store if list is filtered
+  if (store.emails.length > 0) {
+    const fallback = store.emails[0];
+    store.setSelectedEmailId(fallback.id);
 
-  try {
-    if (existing) {
-      store.setSelectedEmailId(existing.id);
-      store.updateTimelineStep(stepId, 'completed', `Opened "${existing.subject}"`);
-      return { success: true, email: existing };
+    if (!fallback.isRead) {
+      const updated = store.emails.map((e) =>
+        e.id === fallback.id ? { ...e, isRead: true } : e
+      );
+      store.setEmails(updated);
+      fetch(`/api/mail/${fallback.id}`).catch(() => {});
     }
 
-    // Fallback: select first email in store if list is filtered
-    if (store.emails.length > 0) {
-      const fallback = store.emails[0];
-      store.setSelectedEmailId(fallback.id);
-      store.updateTimelineStep(stepId, 'completed', `Opened "${fallback.subject}"`);
-      return { success: true, email: fallback };
-    }
-
-    // Fetch email detail from API
-    const res = await fetch(`/api/mail/${params.messageId}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.email) {
-        store.setSelectedEmailId(data.email.id);
-        store.updateTimelineStep(stepId, 'completed', `Opened "${data.email.subject}"`);
-        return { success: true, email: data.email };
-      }
-    }
-
-    store.updateTimelineStep(stepId, 'failed', 'Email not found');
-    return { success: false, error: 'Email not found' };
-  } catch (error: any) {
-    store.updateTimelineStep(stepId, 'failed', error.message);
-    return { success: false, error: error.message };
+    store.updateTimelineStep(stepId, 'completed', `Opened "${fallback.subject}"`);
+    return { success: true, email: fallback };
   }
+
+  store.updateTimelineStep(stepId, 'failed', `Email not found: ${params.messageId}`);
+  return { success: false, error: 'Email not found' };
 }
 
 export async function commandApplyFilter(params: {
