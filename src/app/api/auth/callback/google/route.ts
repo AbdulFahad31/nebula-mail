@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getOAuth2Client } from '@/lib/auth/google-oauth';
 import { google } from 'googleapis';
 import { db } from '@/lib/db/prisma';
@@ -8,10 +8,11 @@ import { createSession } from '@/lib/auth/session';
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const host = req.headers.get('host') || 'localhost:3001';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://${host}`;
 
   if (!code) {
-    return NextResponse.redirect(`${appUrl}?error=missing_code`);
+    return NextResponse.redirect(`${appUrl}/inbox?error=missing_code`);
   }
 
   try {
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
     const { data: userInfo } = await oauth2.userinfo.get();
 
     if (!userInfo.email) {
-      return NextResponse.redirect(`${appUrl}?error=no_email`);
+      return NextResponse.redirect(`${appUrl}/inbox?error=no_email`);
     }
 
     const email = userInfo.email;
@@ -69,6 +70,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/inbox`);
   } catch (error) {
     console.error('Google OAuth Callback Error:', error);
-    return NextResponse.redirect(`${appUrl}?error=oauth_failed`);
+    return NextResponse.redirect(`${appUrl}/inbox?error=oauth_failed`);
   }
 }
