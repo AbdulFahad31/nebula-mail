@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const userId = session?.userId || 'demo_user_id';
 
   const { searchParams } = new URL(req.url);
-  const view = searchParams.get('view') || 'inbox';
+  const view = (searchParams.get('view') || 'inbox') as 'inbox' | 'sent' | 'trash';
   const keyword = searchParams.get('keyword') || undefined;
   const sender = searchParams.get('sender') || undefined;
   const subject = searchParams.get('subject') || undefined;
@@ -19,7 +19,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const emails = await getEmailsFromCache(userId, {
+      view,
       isSent: view === 'sent',
+      isTrash: view === 'trash',
       keyword,
       sender,
       subject,

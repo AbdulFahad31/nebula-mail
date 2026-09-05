@@ -5,10 +5,14 @@ import { useMailStore } from '@/lib/store/useMailStore';
 import { useEmails } from '@/lib/hooks/useMailQueries';
 import { EmailRow } from './EmailRow';
 import { SmartFilterChips } from './SmartFilterChips';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, PanelLeftClose } from 'lucide-react';
 import { commandSearchEmails } from '@/lib/commands';
 
-export function InboxList() {
+interface InboxListProps {
+  onToggleCollapse?: () => void;
+}
+
+export function InboxList({ onToggleCollapse }: InboxListProps = {}) {
   const { activeView, setActiveView, setEmails } = useMailStore();
   const [searchInput, setSearchInput] = useState('');
 
@@ -30,7 +34,7 @@ export function InboxList() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#14161A] border-r border-[#2A2D33] font-sans transition-colors duration-150">
+    <div className="flex flex-col h-full bg-[#14161A] border-r border-[#2A2D33] font-sans transition-colors duration-150 min-w-0">
       {/* Header Underline Tabs & Search */}
       <div className="px-3.5 py-3 border-b border-[#2A2D33] bg-[#14161A] space-y-2.5">
         <div className="flex items-center justify-between">
@@ -56,15 +60,36 @@ export function InboxList() {
             >
               Sent
             </button>
+            <button
+              onClick={() => setActiveView('trash')}
+              className={`pb-1 transition-colors ${
+                activeView === 'trash'
+                  ? 'border-b-2 border-[#6B9971] text-[#EDECE8] font-medium'
+                  : 'text-[#9A9CA3] hover:text-[#EDECE8] font-normal'
+              }`}
+            >
+              Trash
+            </button>
           </div>
 
-          <button
-            onClick={() => refetch()}
-            className="p-1 text-[#6B6D73] hover:text-[#EDECE8] transition-colors"
-            title="Refresh messages"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#6B9971]' : ''}`} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => refetch()}
+              className="p-1 text-[#6B6D73] hover:text-[#EDECE8] transition-colors"
+              title="Refresh messages"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#6B9971]' : ''}`} />
+            </button>
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="p-1 text-[#6B6D73] hover:text-[#EDECE8] hover:bg-[#1C1F24] rounded transition-colors"
+                title="Collapse Mail Navigation"
+              >
+                <PanelLeftClose className="w-3.5 h-3.5 text-[#6B6D73] hover:text-[#6B9971]" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Minimalist Input with Subtle Border */}
@@ -96,4 +121,3 @@ export function InboxList() {
     </div>
   );
 }
-

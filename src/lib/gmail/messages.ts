@@ -193,10 +193,15 @@ export async function getEmailsFromCache(
 
   const whereClause: any = { userId };
 
-  if (filters.isSent) {
-    whereClause.isSent = true;
+  if (filters.isTrash || filters.view === 'trash') {
+    whereClause.labels = { contains: 'TRASH' };
   } else {
-    whereClause.isSent = false;
+    whereClause.NOT = { labels: { contains: 'TRASH' } };
+    if (filters.isSent || filters.view === 'sent') {
+      whereClause.isSent = true;
+    } else {
+      whereClause.isSent = false;
+    }
   }
 
   if (filters.isUnread !== undefined) {
@@ -486,3 +491,60 @@ export async function renewGmailWatchIfNeeded(userId: string): Promise<void> {
   }
 }
 
+
+export async function trashEmailService(userId: string, emailId: string): Promise<boolean> {
+  const email = await db.emailCache.findFirst({
+    where: { userId, OR: [{ id: emailId }, { gmailMessageId: emailId }] },
+  });
+  if (!email) return false;
+  try {
+    const gmail = await getAuthenticatedGmailClient(userId);
+    await gmail.users.messages.trash({ userId: 'me', id: email.gmailMessageId });
+    console.log('[Gmail API] Message trashing synced for ' + email.gmailMessageId);
+  } catch (err: any) {
+    console.warn('[Gmail API Trash Fallback]:', err.message);
+  }
+  await db.emailCache.update({
+    where: { id: email.id },
+    data: { labels: 'TRASH' },
+  });
+  return true;
+}
+
+export async function untrashEmailService(userId: string, emailId: string): Promise<boolean> {
+  const email = await db.emailCache.findFirst({
+    where: { userId, OR: [{ id: emailId }, { gmailMessageId: emailId }] },
+  });
+  if (!email) return false;
+  try {
+    const gmail = await getAuthenticatedGmailClient(userId);
+    await gmail.users.messages.untrash({ userId: 'me', id: email.gmailMessageId });
+    console.log('[Gmail API] Message untrashing synced for ' + email.gmailMessageId);
+  } catch (err: any) {
+    console.warn('[Gmail API Untrash Fallback]:', err.message);
+  }
+  const restoredLabel = email.isSent ? 'SENT' : 'INBOX';
+  await db.emailCache.update({
+    where: { id: email.id },
+    data: { labels: restoredLabel },
+  });
+  return true;
+}
+
+export async function permanentlyDeleteEmailService(userId: string, emailId: string): Promise<boolean> {
+  const email = await db.emailCache.findFirst({
+    where: { userId, OR: [{ id: emailId }, { gmailMessageId: emailId }] },
+  });
+  if (!email) return false;
+  try {
+    const gmail = await getAuthenticatedGmailClient(userId);
+    await gmail.users.messages.delete({ userId: 'me', id: email.gmailMessageId });
+    console.log('[Gmail API] Message permanent deletion synced for ' + email.gmailMessageId);
+  } catch (err: any) {
+    console.warn('[Gmail API Delete Fallback]:', err.message);
+  }
+  await db.emailCache.deleteMany({
+    where: { userId, OR: [{ id: email.id }, { gmailMessageId: email.gmailMessageId }] },
+  });
+  return true;
+}

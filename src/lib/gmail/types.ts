@@ -34,6 +34,8 @@ export interface EmailFilterParams {
   subject?: string;
   isUnread?: boolean;
   isSent?: boolean;
+  isTrash?: boolean;
+  view?: 'inbox' | 'sent' | 'trash';
   startDate?: string;
   endDate?: string;
   after?: string;

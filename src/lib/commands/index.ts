@@ -1,4 +1,4 @@
-﻿import { useMailStore } from '@/lib/store/useMailStore';
+import { useMailStore } from '@/lib/store/useMailStore';
 import { EmailFilterParams, ComposeDraft } from '@/lib/gmail/types';
 
 /**
@@ -375,8 +375,102 @@ export async function executeClientAIToolCall(name: string, args: any) {
       return await commandReplyEmail(args);
     case 'forward_email':
       return await commandForwardEmail(args);
+    case 'delete_email':
+      return await commandDeleteEmail(args);
+    case 'restore_email':
+      return await commandRestoreEmail(args);
     default:
       console.warn(`Unknown AI client tool: ${name}`);
       return { success: false };
   }
+}
+
+export async function commandDeleteEmail(params: { messageId?: string }) {
+  const store = useMailStore.getState();
+  const targetId = params.messageId || store.selectedEmailId;
+  const targetEmail = store.emails.find((e) => e.id === targetId || e.gmailMessageId === targetId);
+  if (!targetEmail) return { success: false, error: 'No active email found to delete' };
+  const stepId = store.addTimelineStep('Moving email to Trash', 'Subject: "' + targetEmail.subject + '"');
+  try {
+    const res = await fetch('/api/mail/' + targetEmail.id + '/trash', { method: 'POST' });
+    if (res.ok) {
+      if (store.selectedEmailId === targetEmail.id || store.selectedEmailId === targetEmail.gmailMessageId) store.setSelectedEmailId(null);
+      const listRes = await fetch('/api/mail/list?view=' + store.activeView);
+      if (listRes.ok) { const listData = await listRes.json(); store.setEmails(listData.emails || []); }
+      store.updateTimelineStep(stepId, 'completed', 'Moved message to Trash');
+      return { success: true };
+    } else {
+      const err = await res.json().catch(() => ({}));
+      store.updateTimelineStep(stepId, 'failed', err.error || 'Failed to move to Trash');
+      return { success: false, error: err.error };
+    }
+  } catch (err: any) {
+    store.updateTimelineStep(stepId, 'failed', err.message || 'Trash error');
+    return { success: false, error: err.message };
+  }
+}
+
+export async function commandRestoreEmail(params: { messageId?: string }) {
+  const store = useMailStore.getState();
+  const targetId = params.messageId || store.selectedEmailId;
+  const targetEmail = store.emails.find((e) => e.id === targetId || e.gmailMessageId === targetId);
+  if (!targetEmail) return { success: false, error: 'No active email found to restore' };
+  const stepId = store.addTimelineStep('Restoring email from Trash', 'Subject: "' + targetEmail.subject + '"');
+  try {
+    const res = await fetch('/api/mail/' + targetEmail.id + '/trash', { method: 'DELETE' });
+    if (res.ok) {
+      if (store.selectedEmailId === targetEmail.id || store.selectedEmailId === targetEmail.gmailMessageId) store.setSelectedEmailId(null);
+      const listRes = await fetch('/api/mail/list?view=' + store.activeView);
+      if (listRes.ok) { const listData = await listRes.json(); store.setEmails(listData.emails || []); }
+      store.updateTimelineStep(stepId, 'completed', 'Restored message to inbox');
+      return { success: true };
+    } else {
+      const err = await res.json().catch(() => ({}));
+      store.updateTimelineStep(stepId, 'failed', err.error || 'Failed to restore');
+      return { success: false, error: err.error };
+    }
+  } catch (err: any) {
+    store.updateTimelineStep(stepId, 'failed', err.message || 'Restore error');
+    return { success: false, error: err.message };
+  }
+}
+
+export async function commandPermanentlyDeleteEmail(params: { messageId?: string }) {
+  const store = useMailStore.getState();
+  const targetId = params.messageId || store.selectedEmailId;
+  const targetEmail = store.emails.find((e) => e.id === targetId || e.gmailMessageId === targetId);
+  if (!targetEmail) return { success: false, error: 'No active email found to permanently delete' };
+  return new Promise<{ success: boolean; requiresConfirmation: boolean }>((resolve) => {
+    store.setConfirmationCard({
+      id: 'conf_del_' + Date.now(),
+      type: 'delete',
+      title: 'Confirm Permanent Delete',
+      summary: 'Permanently delete correspondence "' + targetEmail.subject + '"? This action cannot be undone.',
+      payload: { to: [targetEmail.recipient], subject: targetEmail.subject, body: targetEmail.snippet, messageId: targetEmail.id },
+      onConfirm: async () => {
+        const stepId = store.addTimelineStep('Permanently deleting email', 'Subject: "' + targetEmail.subject + '"');
+        try {
+          const res = await fetch('/api/mail/' + targetEmail.id + '/delete', { method: 'DELETE' });
+          if (res.ok) {
+            if (store.selectedEmailId === targetEmail.id || store.selectedEmailId === targetEmail.gmailMessageId) store.setSelectedEmailId(null);
+            const listRes = await fetch('/api/mail/list?view=' + store.activeView);
+            if (listRes.ok) { const listData = await listRes.json(); store.setEmails(listData.emails || []); }
+            store.updateTimelineStep(stepId, 'completed', 'Permanently deleted message');
+            store.setConfirmationCard(null);
+            resolve({ success: true, requiresConfirmation: false });
+          } else {
+            const err = await res.json().catch(() => ({}));
+            store.updateTimelineStep(stepId, 'failed', err.error || 'Failed to delete permanently');
+            store.setConfirmationCard(null);
+            resolve({ success: false, requiresConfirmation: false });
+          }
+        } catch (err: any) {
+          store.updateTimelineStep(stepId, 'failed', err.message || 'Permanent delete error');
+          store.setConfirmationCard(null);
+          resolve({ success: false, requiresConfirmation: false });
+        }
+      },
+      onCancel: () => { store.setConfirmationCard(null); resolve({ success: false, requiresConfirmation: false }); },
+    });
+  });
 }

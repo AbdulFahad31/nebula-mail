@@ -3,13 +3,13 @@
 import React from 'react';
 import { EmailMessage } from '@/lib/gmail/types';
 import { useMailStore } from '@/lib/store/useMailStore';
-import { commandOpenEmail } from '@/lib/commands';
+import { commandOpenEmail, commandDeleteEmail, commandRestoreEmail, commandPermanentlyDeleteEmail } from '@/lib/commands';
+import { Trash2, RotateCcw } from 'lucide-react';
 
 interface EmailRowProps {
   email: EmailMessage;
 }
 
-// Deterministic avatar styles using single accent palette
 function getAvatarStyles(name: string) {
   return {
     bg: 'bg-[#6B9971]/15',
@@ -19,16 +19,31 @@ function getAvatarStyles(name: string) {
 }
 
 export function EmailRow({ email }: EmailRowProps) {
-  const { selectedEmailId } = useMailStore();
+  const { selectedEmailId, activeView } = useMailStore();
   const isSelected = selectedEmailId === email.id || selectedEmailId === email.gmailMessageId;
 
-  const formattedDate = new Date(email.receivedAt).toLocaleDateString([], {
+  const formattedDate = new Date(email.receivedAt).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
   });
 
   const handleClick = () => {
     commandOpenEmail({ messageId: email.id });
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    commandDeleteEmail({ messageId: email.id });
+  };
+
+  const handleRestore = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    commandRestoreEmail({ messageId: email.id });
+  };
+
+  const handlePermanentDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    commandPermanentlyDeleteEmail({ messageId: email.id });
   };
 
   const displayName = email.senderName || email.sender;
@@ -43,21 +58,18 @@ export function EmailRow({ email }: EmailRowProps) {
           : 'bg-[#14161A] hover:bg-[#1C1F24]'
       }`}
     >
-      {/* Unread marker dot (Single Accent Color Only) */}
       <div className="w-2 pt-2 flex justify-center shrink-0">
         {!email.isRead && (
           <span className="w-2 h-2 rounded-full bg-[#6B9971]" />
         )}
       </div>
 
-      {/* Monogram Avatar */}
       <div
         className={`w-7 h-7 rounded-full border ${avatar.bg} ${avatar.border} ${avatar.text} flex items-center justify-center text-xs font-serif-display font-semibold shrink-0 mt-0.5 transition-transform duration-150 group-hover:scale-[1.03]`}
       >
         {displayName.charAt(0).toUpperCase()}
       </div>
 
-      {/* Email Metadata & Typographic Hierarchy */}
       <div className="flex-1 min-w-0 space-y-0.5">
         <div className="flex items-baseline justify-between gap-2">
           <span
@@ -67,9 +79,41 @@ export function EmailRow({ email }: EmailRowProps) {
           >
             {displayName}
           </span>
-          <span className="text-[11px] font-sans tracking-normal text-[#6B6D73] shrink-0 font-normal">
-            {formattedDate}
-          </span>
+          
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[11px] font-sans tracking-normal text-[#6B6D73] font-normal group-hover:hidden">
+              {formattedDate}
+            </span>
+
+            <div className="hidden group-hover:flex items-center gap-1 font-sans">
+              {activeView === 'trash' ? (
+                <>
+                  <button
+                    onClick={handleRestore}
+                    className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors"
+                    title="Restore to inbox"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={handlePermanentDelete}
+                    className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors"
+                    title="Delete permanently"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleDelete}
+                  className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors"
+                  title="Move to Trash"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="text-[13px] font-serif-display tracking-[-0.01em] text-[#EDECE8] truncate font-semibold leading-tight">
@@ -83,5 +127,3 @@ export function EmailRow({ email }: EmailRowProps) {
     </div>
   );
 }
-
-

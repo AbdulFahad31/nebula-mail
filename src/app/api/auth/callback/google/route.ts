@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getOAuth2Client } from '@/lib/auth/google-oauth';
 import { google } from 'googleapis';
 import { db } from '@/lib/db/prisma';

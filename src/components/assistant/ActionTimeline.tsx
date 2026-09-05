@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
@@ -14,7 +14,7 @@ export function ActionTimeline() {
     <div className="p-3 bg-[#1C1F24] border border-[#2A2D33] rounded-md space-y-2 text-xs font-sans">
       <div className="flex items-center gap-1.5 text-[#EDECE8] font-medium text-xs border-b border-[#2A2D33] pb-1.5 font-sans">
         <List className="w-3.5 h-3.5 text-[#6B9971]" />
-        <span className="tracking-wide text-[11px] font-sans font-semibold  text-[#6B6D73]">Action timeline</span>
+        <span className="tracking-wide text-[11px] font-sans font-semibold text-[#6B6D73]">Action timeline</span>
       </div>
 
       <div className="space-y-2 pt-0.5 font-sans">

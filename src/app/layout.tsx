@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Source_Serif_4, IBM_Plex_Sans } from 'next/font/google';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import './globals.css';

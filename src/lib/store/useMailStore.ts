@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { EmailMessage, EmailFilterParams, ComposeDraft } from '@/lib/gmail/types';
 
 export interface TimelineStep {
@@ -11,7 +11,7 @@ export interface TimelineStep {
 
 export interface ConfirmationModalState {
   id: string;
-  type: 'send' | 'reply' | 'forward';
+  type: 'send' | 'reply' | 'forward' | 'delete';
   title: string;
   summary: string;
   payload: {
@@ -27,7 +27,7 @@ export interface ConfirmationModalState {
 
 interface MailStoreState {
   // Navigation & Data
-  activeView: 'inbox' | 'sent';
+  activeView: 'inbox' | 'sent' | 'trash';
   emails: EmailMessage[];
   selectedEmailId: string | null;
 
@@ -55,7 +55,7 @@ interface MailStoreState {
   toggleDarkMode: () => void;
 
   // Actions / Reducers
-  setActiveView: (view: 'inbox' | 'sent') => void;
+  setActiveView: (view: 'inbox' | 'sent' | 'trash') => void;
   setEmails: (emails: EmailMessage[]) => void;
   setSelectedEmailId: (id: string | null) => void;
   setFilterState: (filters: Partial<EmailFilterParams>) => void;

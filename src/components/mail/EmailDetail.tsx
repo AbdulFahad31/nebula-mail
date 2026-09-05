@@ -1,61 +1,62 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
-import { useEmailDetail } from '@/lib/hooks/useMailQueries';
-import { Reply, Forward, Mail, Clock } from 'lucide-react';
-import { commandReplyEmail, commandForwardEmail } from '@/lib/commands';
-
-function getAvatarStyles(name: string) {
-  const hash = Array.from(name).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const palettes = [
-    { bg: 'bg-[#24463A]/10 dark:bg-[#417562]/20', text: 'text-[#24463A] dark:text-[#6BB397]', border: 'border-[#24463A]/20 dark:border-[#417562]/30' },
-    { bg: 'bg-[#201F1B]/8 dark:bg-[#FFFFFF]/10', text: 'text-[#201F1B] dark:text-[#EDEDE9]', border: 'border-[#201F1B]/15 dark:border-[#FFFFFF]/15' },
-    { bg: 'bg-[#4A473E]/12 dark:bg-[#C2BCA8]/15', text: 'text-[#3B3830] dark:text-[#D8D2BE]', border: 'border-[#4A473E]/20 dark:border-[#C2BCA8]/25' },
-    { bg: 'bg-[#1C372E]/10 dark:bg-[#345E4E]/22', text: 'text-[#1C372E] dark:text-[#78BFA5]', border: 'border-[#1C372E]/20 dark:border-[#345E4E]/30' },
-  ];
-  return palettes[hash % palettes.length];
-}
+import { Reply, Forward, Trash2, RotateCcw } from 'lucide-react';
+import { commandDeleteEmail, commandRestoreEmail, commandPermanentlyDeleteEmail } from '@/lib/commands';
 
 export function EmailDetail() {
-  const { emails, selectedEmailId } = useMailStore();
-  const { data: queriedEmail } = useEmailDetail(selectedEmailId);
+  const { emails, selectedEmailId, activeView, setComposeState } = useMailStore();
 
-  const selectedEmail =
-    queriedEmail ||
-    emails.find((e) => e.id === selectedEmailId || e.gmailMessageId === selectedEmailId);
+  const selectedEmail = emails.find(
+    e => e.id === selectedEmailId || e.gmailMessageId === selectedEmailId
+  );
 
   if (!selectedEmail) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#14161A] border-r border-[#2A2D33] font-sans transition-colors duration-150">
-        <div className="w-12 h-12 rounded-full bg-[#1C1F24] border border-[#2A2D33] flex items-center justify-center mb-3">
-          <Mail className="w-5 h-5 stroke-[1.5] text-[#6B6D73]" />
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#14161A] border-r border-[#2A2D33] text-[#6B6D73] font-sans p-6 text-center">
+        <div className="w-12 h-12 rounded-full border border-[#2A2D33] bg-[#1C1F24] flex items-center justify-center mb-3">
+          <span className="text-lg text-[#6B9971] font-serif-display font-semibold">N</span>
         </div>
-        <h3 className="text-sm font-serif-display font-semibold text-[#EDECE8] tracking-[-0.01em]">
-          No Document Selected
-        </h3>
-        <p className="text-xs text-[#9A9CA3] max-w-xs mt-1 font-sans leading-relaxed">
-          Select a correspondence from the list or use the assistant to search and open an email.
+        <p className="text-xs font-serif-display font-medium text-[#EDECE8] mb-1">
+          No conversation selected
+        </p>
+        <p className="text-[11px] text-[#6B6D73] font-normal">
+          Select an email from your list to read its content
         </p>
       </div>
     );
   }
 
-  const formattedDate = new Date(selectedEmail.receivedAt).toLocaleString([], {
+  const formattedDate = new Date(selectedEmail.receivedAt).toLocaleString(undefined, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
   });
 
   const handleReplyClick = () => {
-    commandReplyEmail({ messageId: selectedEmail.id, body: "I'll handle this tomorrow." });
+    setComposeState({
+      isOpen: true,
+      to: [selectedEmail.sender],
+      subject: selectedEmail.subject.startsWith('Re:')
+        ? selectedEmail.subject
+        : `Re: ${selectedEmail.subject}`,
+      body: `\n\n--- On ${formattedDate}, ${selectedEmail.sender} wrote:\n> ${selectedEmail.snippet}`,
+      replyToMessageId: selectedEmail.id,
+    });
   };
 
   const handleForwardClick = () => {
-    commandForwardEmail({ messageId: selectedEmail.id, to: ['john@example.com'] });
+    setComposeState({
+      isOpen: true,
+      to: [],
+      subject: selectedEmail.subject.startsWith('Fwd:')
+        ? selectedEmail.subject
+        : `Fwd: ${selectedEmail.subject}`,
+      body: `\n\n--- Forwarded Message ---\nFrom: ${selectedEmail.sender}\nDate: ${formattedDate}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.snippet}`,
+    });
   };
 
   const displayName = selectedEmail.senderName || selectedEmail.sender;
@@ -79,35 +80,65 @@ export function EmailDetail() {
             <Forward className="w-3.5 h-3.5 text-[#6B6D73]" />
             Forward
           </button>
+
+          {activeView === 'trash' ? (
+            <>
+              <button
+                onClick={() => commandRestoreEmail({ messageId: selectedEmail.id })}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1C1F24] hover:bg-[#24282F] border border-[#2A2D33] text-[#9A9CA3] hover:text-[#EDECE8] text-xs font-medium transition-colors font-sans"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#6B9971]" />
+                Restore
+              </button>
+              <button
+                onClick={() => commandPermanentlyDeleteEmail({ messageId: selectedEmail.id })}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1C1F24] hover:bg-[#24282F] border border-[#2A2D33] text-[#9A9CA3] hover:text-[#EDECE8] text-xs font-medium transition-colors font-sans"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-[#9A9CA3]" />
+                Delete Permanently
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => commandDeleteEmail({ messageId: selectedEmail.id })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1C1F24] hover:bg-[#24282F] border border-[#2A2D33] text-[#9A9CA3] hover:text-[#EDECE8] text-xs font-medium transition-colors font-sans"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-[#6B6D73]" />
+              Trash
+            </button>
+          )}
+        </div>
+
+        <div className="text-[11px] text-[#6B6D73] font-mono">
+          ID: {selectedEmail.id.slice(0, 8)}
         </div>
       </div>
 
-      {/* Main Reading Pane */}
-      <div className="p-6 md:p-8 space-y-6 max-w-3xl">
-        {/* Subject Header */}
-        <h1 className="text-xl font-serif-display font-semibold text-[#EDECE8] tracking-[-0.01em] leading-snug">
-          {selectedEmail.subject}
-        </h1>
+      {/* Main Email Content */}
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="space-y-4 border-b border-[#2A2D33] pb-6">
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-xl font-serif-display font-semibold text-[#EDECE8] tracking-[-0.015em] leading-snug">
+              {selectedEmail.subject}
+            </h1>
+            <span className="text-[11px] font-sans text-[#6B6D73] shrink-0 font-normal pt-1">
+              {formattedDate}
+            </span>
+          </div>
 
-        {/* Sender Info Card */}
-        <div className="flex items-center justify-between gap-4 p-4 rounded-md bg-[#1C1F24] border border-[#2A2D33]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full border bg-[#6B9971]/15 border-[#6B9971]/30 text-[#6B9971] flex items-center justify-center font-serif-display font-semibold text-xs shrink-0">
+            <div className="w-9 h-9 rounded-full border border-[#6B9971]/30 bg-[#6B9971]/15 text-[#6B9971] flex items-center justify-center font-serif-display font-semibold text-sm">
               {displayName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <div className="text-[13.5px] font-serif-display font-semibold text-[#EDECE8] tracking-[-0.01em]">
+              <div className="text-xs font-serif-display font-semibold text-[#EDECE8]">
                 {displayName}
               </div>
-              <div className="text-[11px] text-[#6B6D73] font-sans">
-                to <span className="text-[#9A9CA3] font-medium">{selectedEmail.recipient}</span>
+              <div className="text-[11px] font-sans text-[#6B6D73] font-normal">
+                {selectedEmail.sender}
               </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-[11px] text-[#6B6D73] font-sans font-normal">
-            <Clock className="w-3 h-3 text-[#6B6D73]" />
-            {formattedDate}
           </div>
         </div>
 
@@ -115,7 +146,7 @@ export function EmailDetail() {
         <div className="space-y-3 pt-2 font-sans">
           {selectedEmail.bodyHtml ? (
             <div className="rounded-xl border border-[#2A2D33] p-5 bg-[#1C1F24]">
-              <div className="text-[10px] font-sans font-semibold  text-[#6B6D73] flex items-center gap-1.5 mb-3">
+              <div className="text-[10px] font-sans font-semibold text-[#6B6D73] flex items-center gap-1.5 mb-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#6B9971]/60" />
                 <span>Original formatting preserved</span>
               </div>
@@ -136,5 +167,3 @@ export function EmailDetail() {
     </div>
   );
 }
-
-

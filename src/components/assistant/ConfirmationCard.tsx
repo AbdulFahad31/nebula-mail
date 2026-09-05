@@ -20,6 +20,8 @@ export function ConfirmationCard() {
     }
   };
 
+  const isDelete = confirmationCard.type === 'delete';
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.98, y: 4 }}
@@ -37,19 +39,23 @@ export function ConfirmationCard() {
 
       {/* Payload Preview Card */}
       <div className="p-3 bg-[#14161A] rounded-md border border-[#2A2D33] text-xs space-y-1.5 font-sans">
-        <div>
-          <span className="text-[#6B6D73]">To:</span>{' '}
-          <span className="text-[#EDECE8] font-medium">{confirmationCard.payload.to.join(', ')}</span>
-        </div>
+        {confirmationCard.payload.to && confirmationCard.payload.to.length > 0 && (
+          <div>
+            <span className="text-[#6B6D73]">{isDelete ? 'Recipient:' : 'To:'}</span>{' '}
+            <span className="text-[#EDECE8] font-medium">{confirmationCard.payload.to.join(', ')}</span>
+          </div>
+        )}
         <div>
           <span className="text-[#6B6D73]">Subject:</span>{' '}
           <span className="text-[#EDECE8] font-serif-display font-semibold">
             {confirmationCard.payload.subject}
           </span>
         </div>
-        <div className="text-[#9A9CA3] line-clamp-2 pt-1.5 border-t border-[#2A2D33] italic font-sans leading-relaxed">
-          "{confirmationCard.payload.body}"
-        </div>
+        {confirmationCard.payload.body && (
+          <div className="text-[#9A9CA3] line-clamp-2 pt-1.5 border-t border-[#2A2D33] italic font-sans leading-relaxed">
+            {confirmationCard.payload.body}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 pt-1 font-sans">
@@ -63,7 +69,7 @@ export function ConfirmationCard() {
           ) : (
             <Check className="w-3.5 h-3.5" />
           )}
-          Authorize & send
+          {isDelete ? 'Authorize & Delete' : 'Authorize & send'}
         </button>
 
         <button
@@ -77,4 +83,3 @@ export function ConfirmationCard() {
     </motion.div>
   );
 }
-

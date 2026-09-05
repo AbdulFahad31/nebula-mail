@@ -1,14 +1,19 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
 import { ActionTimeline } from './ActionTimeline';
 import { ConfirmationCard } from './ConfirmationCard';
-import { Sparkles, Send, Trash2, Search, Filter, PenSquare, SendHorizontal, Layers } from 'lucide-react';
+import { Sparkles, Send, Trash2, Search, Filter, PenSquare, SendHorizontal, Layers, PanelRightClose } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { executeClientAIToolCall } from '@/lib/commands';
 
-export function AssistantPanel() {
+interface AssistantPanelProps {
+  onToggleCollapse?: () => void;
+  isCollapsed?: boolean;
+}
+
+export function AssistantPanel({ onToggleCollapse, isCollapsed }: AssistantPanelProps = {}) {
   const { actionTimeline, isAIExecuting, addTimelineStep, updateTimelineStep, clearTimeline, setIsAIExecuting, selectedEmailId } = useMailStore();
   const [prompt, setPrompt] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -97,22 +102,34 @@ export function AssistantPanel() {
   ];
 
   return (
-    <div className="bg-[#14161A] w-80 lg:w-96 flex flex-col h-full border-l border-[#2A2D33] font-sans transition-colors duration-150">
+    <div className="bg-[#14161A] w-full flex flex-col h-full border-l border-[#2A2D33] font-sans transition-colors duration-150 min-w-0">
       {/* Panel Header */}
       <div className="px-4 py-3 border-b border-[#2A2D33] bg-[#14161A] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-[11px] font-sans font-semibold  text-[#6B6D73]">
+          <Sparkles className="w-3.5 h-3.5 text-[#6B9971]" />
+          <h2 className="text-[11px] font-sans font-semibold text-[#6B6D73]">
             AI Assistant
           </h2>
         </div>
 
-        <button
-          onClick={clearTimeline}
-          className="p-1 rounded text-[#6B6D73] hover:text-[#EDECE8] hover:bg-[#1C1F24] transition-colors"
-          title="Clear history"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={clearTimeline}
+            className="p-1 rounded text-[#6B6D73] hover:text-[#EDECE8] hover:bg-[#1C1F24] transition-colors"
+            title="Clear history"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1 rounded text-[#6B6D73] hover:text-[#EDECE8] hover:bg-[#1C1F24] transition-colors"
+              title="Collapse Assistant Panel"
+            >
+              <PanelRightClose className="w-3.5 h-3.5 text-[#6B6D73] hover:text-[#6B9971]" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Feed */}
@@ -120,7 +137,7 @@ export function AssistantPanel() {
         {/* Raycast / Linear Style Divided Command Palette List */}
         {actionTimeline.length === 0 && (
           <div className="space-y-2 font-sans">
-            <div className="text-[11px] font-sans font-semibold  text-[#6B6D73] px-1">
+            <div className="text-[11px] font-sans font-semibold text-[#6B6D73] px-1">
               Preset AI commands
             </div>
 
@@ -196,5 +213,3 @@ export function AssistantPanel() {
     </div>
   );
 }
-
-
