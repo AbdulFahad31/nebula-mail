@@ -1,6 +1,6 @@
-# Nebula Mail — Premium Dark Theme Mail Client with Native AI Controls
+﻿# Nebula Mail — Premium Dark Theme Mail Client with Native AI Controls
 
-Nebula Mail is a state-of-the-art desktop-first email application built with **Next.js**, a **Unified Command Layer**, **Google Gmail API Integration**, **Server-Sent Events (SSE) Push Synchronization**, **Gemini AI Function Calling**, and a **curated dark palette featuring a muted sage green accent (`#6B9971`)**.
+Nebula Mail is a state-of-the-art desktop-first email application built with **Next.js**, a **Unified Command Layer**, **Google Gmail API Integration**, **Server-Sent Events (SSE) Push Synchronization**, **Gemini AI Function Calling**, **Dynamic OAuth Account Switcher**, and a **curated dark palette featuring a muted sage green accent (`#6B9971`)**.
 
 ---
 
@@ -75,9 +75,19 @@ To prevent third-party HTML email styles (e.g. from Google, Oracle, LinkedIn, EY
 
 ---
 
-## 🌟 Key Features & Capabilities
+## 🌟 Key Features & Capabilities (All Features Complete)
 
-### 1. Unified Command Layer (`src/lib/commands/index.ts`)
+### 1. Dynamic Account Switcher & OAuth Management (`AccountMenu.tsx`)
+- **Top-Right Dropdown Trigger**: Displays live `● {session.user.email}` status dot and email.
+- **Switch Google Account**: Calls `/api/auth/logout`, resets Zustand store (`resetStore()`), and redirects to `/api/auth/google?prompt=select_account` forcing Google to display the **Account Chooser**.
+- **Disconnect Account**: Sends `DELETE /api/gmail/account` request revoking encrypted refresh tokens in Prisma DB, clearing cookies, and resetting store cache.
+
+### 2. Duplicate Send Deduplication & Layout Protection
+- **Layout Overlap Fix**: `ComposeModal` anchored to `right-4 md:right-[380px]`, positioning it neatly to the left of the AI Assistant column so it never blocks or obscures the **Authorization Required** card.
+- **In-Flight Send Lock & Deduplication**: `executeSendEmailDirect` contains an execution lock (`isSendingLock`) and a 3-second payload hash deduplication guard preventing duplicate email dispatches.
+- **Single AI Authorization Trigger**: AI direct send requests trigger the single Authorization Card directly in the AI Assistant panel without cluttering the screen with duplicate compose drawers.
+
+### 3. Unified Command Layer (`src/lib/commands/index.ts`)
 A symmetric command architecture where user actions (clicks, key presses) and AI function tool calls trigger identical underlying functions:
 - `commandSearchEmails`: Filters inbox email list by keyword or sender.
 - `commandOpenEmail`: Selects an email thread and opens detail pane.
@@ -89,16 +99,16 @@ A symmetric command architecture where user actions (clicks, key presses) and AI
 - `commandForwardEmail`: Prepares a forward email draft.
 - `executeSendEmailDirect`: Dispatches direct email requests to Gmail API.
 
-### 2. Gmail API Integration & Encryption
+### 4. Gmail API Integration & Token Encryption
 - **Google OAuth 2.0 Auth Flow**: Authenticates users and generates access/refresh tokens.
 - **AES-256-GCM Token Encryption**: Stores encrypted refresh tokens securely in database (`src/lib/auth/crypto.ts`).
-- **Live Sync Engine**: Fetches messages and threads directly from Google Gmail API (`src/lib/gmail/messages.ts`).
-- **Mock Data Fallback**: Automatically seeds high-quality local mock threads when no Google account is connected.
+- **Live Sync & Auto-Cache Population**: Automatically fetches recent 50 messages from Gmail API upon login if cache is empty (`src/lib/gmail/messages.ts`).
+- **Mock Data Fallback**: Automatically seeds local mock threads when no Google account is connected.
 
-### 3. Real-Time Push Pipeline (Server-Sent Events)
+### 5. Real-Time Push Pipeline (Server-Sent Events)
 - **SSE Stream (`/api/sync/sse`)**: Keeps the browser inbox UI in live sync with background mail sync operations without requiring page refreshes.
 
-### 4. AI Assistant & Security Guard (`src/app/api/assistant/chat`)
+### 6. AI Assistant & Security Guard (`src/app/api/assistant/chat`)
 - **Gemini API Integration**: Uses `@google/genai` with Zod parameter schemas for function calling (`src/lib/ai/schemas.ts`).
 - **Human-in-the-Loop Confirmation Guard**: Destructive or outbound actions (sending email, replying) require explicit user approval via an **Authorization Required** card before execution.
 - **Real-Time Action Timeline**: Visual timeline (`ActionTimeline.tsx`) displays live tool call statuses (`running`, `completed`, `failed`).
@@ -109,14 +119,16 @@ A symmetric command architecture where user actions (clicks, key presses) and AI
 
 | # | Feature | Trigger / Command | Expected Visual Outcome |
 |---|---|---|---|
-| **1** | **Email Selection** | Click any email row in inbox list. | Selected row highlights with left border (`#6B9971`), detail pane displays email body, headers, and sender avatar. |
-| **2** | **Tab Navigation** | Click **Inbox** or **Sent** tabs. | Active tab updates with green underline (`#6B9971`), email list updates accordingly. |
-| **3** | **Search & Smart Filters** | Type in top search bar or click smart chips. | Active filter chip appears, list filters immediately, **Clear** resets view. |
-| **4** | **Manual Compose & Send** | Click **New Message**, fill form, click **Send**. | Bottom-right modal opens, submits via Gmail API (or mock cache), updates list and switches to Sent tab. |
-| **5** | **AI Search & Open** | Type: *"Find emails about Q3 report"* in AI panel. | AI executes `searchEmails` and `openEmail`. Email list filters and matching message opens in reading pane. |
-| **6** | **AI Smart Filter** | Type: *"Show me all unread emails"*. | AI executes `applyFilter`. `Unread Only` chip activates, list filters to unread messages. |
-| **7** | **AI Draft Preparation** | Type: *"Draft a reply to Sarah saying I will review this"*. | AI executes `populateCompose`. Compose modal opens pre-filled with recipient, subject (`Re: ...`), and body. |
-| **8** | **AI Authorization Guard** | Type: *"Send email to alex@example.com subject 'Update' body 'All clear'"*. | Outbound email is held in an **Authorization Required** card. Clicking **Authorize & send** completes the dispatch. |
+| **1** | **Account Switching** | Click top-right `● {email}` $\rightarrow$ **Switch Google account**. | Clears local store, redirects to Google Account Chooser, re-authenticates new account. |
+| **2** | **Account Disconnection** | Click top-right `● {email}` $\rightarrow$ **Disconnect account**. | Revokes DB OAuth tokens, clears cookies, resets store state, updates Navbar status. |
+| **3** | **Email Selection** | Click any email row in inbox list. | Selected row highlights with left border (`#6B9971`), detail pane displays email body, headers, and sender avatar. |
+| **4** | **Tab Navigation** | Click **Inbox** or **Sent** tabs. | Active tab updates with green underline (`#6B9971`), email list updates accordingly. |
+| **5** | **Search & Smart Filters** | Type in top search bar or click smart chips. | Active filter chip appears, list filters immediately, **Clear** resets view. |
+| **6** | **Manual Compose & Send** | Click **New Message**, fill form, click **Send**. | Bottom-right modal opens (positioned cleanly to the left of AI panel), submits via Gmail API, updates list and switches to Sent tab. |
+| **7** | **AI Search & Open** | Type: *"Find emails about Q3 report"* in AI panel. | AI executes `searchEmails` and `openEmail`. Email list filters and matching message opens in reading pane. |
+| **8** | **AI Smart Filter** | Type: *"Show me all unread emails"*. | AI executes `applyFilter`. `Unread Only` chip activates, list filters to unread messages. |
+| **9** | **AI Draft Preparation** | Type: *"Draft a reply to Sarah saying I will review this"*. | AI executes `populateCompose`. Compose modal opens pre-filled with recipient, subject (`Re: ...`), and body. |
+| **10** | **AI Authorization Guard** | Type: *"Send email to alex@example.com subject 'Update' body 'All clear'"*. | Outbound email is held in an **Authorization Required** card. Clicking **Authorize & send** completes single dispatch without duplicate send. |
 
 ---
 
