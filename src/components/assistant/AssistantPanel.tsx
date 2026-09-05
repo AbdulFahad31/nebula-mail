@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
@@ -101,7 +101,7 @@ export function AssistantPanel() {
       {/* Panel Header */}
       <div className="px-4 py-3 border-b border-[#2A2D33] bg-[#14161A] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-[11px] font-sans font-semibold uppercase tracking-[0.08em] text-[#6B6D73]">
+          <h2 className="text-[11px] font-sans font-semibold  text-[#6B6D73]">
             AI Assistant
           </h2>
         </div>
@@ -120,8 +120,8 @@ export function AssistantPanel() {
         {/* Raycast / Linear Style Divided Command Palette List */}
         {actionTimeline.length === 0 && (
           <div className="space-y-2 font-sans">
-            <div className="text-[11px] font-sans font-semibold uppercase tracking-[0.08em] text-[#6B6D73] px-1">
-              Preset AI Commands
+            <div className="text-[11px] font-sans font-semibold  text-[#6B6D73] px-1">
+              Preset AI commands
             </div>
 
             <div className="divide-y divide-[#2A2D33] border-y border-[#2A2D33]">
@@ -138,7 +138,7 @@ export function AssistantPanel() {
                   >
                     {/* Icon sitting directly on background, monoline style, consistent 18px size */}
                     <IconComponent className="w-[18px] h-[18px] stroke-[1.5] text-[#6B6D73] group-hover:text-[#6B9971] transition-colors shrink-0" />
-                    
+
                     <div className="flex-1 min-w-0 font-sans">
                       <div className="text-xs font-sans font-medium text-[#EDECE8] group-hover:text-[#EDECE8] transition-colors leading-tight">
                         {item.title}

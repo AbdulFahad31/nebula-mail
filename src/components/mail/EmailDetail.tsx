@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
@@ -115,7 +115,7 @@ export function EmailDetail() {
         <div className="space-y-3 pt-2 font-sans">
           {selectedEmail.bodyHtml ? (
             <div className="rounded-xl border border-[#2A2D33] p-5 bg-[#1C1F24]">
-              <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-[#6B6D73] flex items-center gap-1.5 mb-3">
+              <div className="text-[10px] font-sans font-semibold  text-[#6B6D73] flex items-center gap-1.5 mb-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#6B9971]/60" />
                 <span>Original formatting preserved</span>
               </div>

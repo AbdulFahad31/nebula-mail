@@ -1,17 +1,18 @@
-import type { Metadata } from 'next';
-import { Fraunces, Geist } from 'next/font/google';
+﻿import type { Metadata } from 'next';
+import { Source_Serif_4, IBM_Plex_Sans } from 'next/font/google';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import './globals.css';
 
-const fraunces = Fraunces({
-  variable: '--font-fraunces',
+const sourceSerif4 = Source_Serif_4({
+  variable: '--font-source-serif',
   subsets: ['latin'],
-  axes: ['SOFT', 'WONK', 'opsz'],
+  weight: ['400', '600', '700'],
 });
 
-const geist = Geist({
-  variable: '--font-geist',
+const ibmPlexSans = IBM_Plex_Sans({
+  variable: '--font-ibm-plex-sans',
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
 });
 
 export const metadata: Metadata = {
@@ -21,12 +22,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${geist.variable} dark h-full antialiased`}>
-      <body className="h-full bg-[#14161A] text-[#EDECE8] font-sans selection:bg-[#6B9971]/25 selection:text-[#EDECE8]">
+    <html lang="en" className={`${sourceSerif4.variable} ${ibmPlexSans.variable} h-full antialiased`}>
+      <body className="h-full bg-[#FAFAF8] text-[#201F1B] font-sans selection:bg-[#6B9971]/25 selection:text-[#201F1B]">
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );
 }
-
-

@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { EmailMessage, EmailFilterParams, ComposeDraft } from '@/lib/gmail/types';
 
 export interface TimelineStep {
@@ -50,7 +50,7 @@ interface MailStoreState {
   confirmationCard: ConfirmationModalState | null;
   isAIExecuting: boolean;
 
-  // Secondary Dark Mode State (Item 6)
+  // Secondary Dark Mode State
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 
@@ -129,7 +129,6 @@ export const useMailStore = create<MailStoreState>((set, get) => ({
 
   setEmails: (emails) => set({ emails }),
 
-
   setSelectedEmailId: (id) => set({ selectedEmailId: id }),
 
   setFilterState: (filters) =>
@@ -170,6 +169,14 @@ export const useMailStore = create<MailStoreState>((set, get) => ({
     })),
 
   addTimelineStep: (stepName, details) => {
+    const state = get();
+    const lastStep = state.actionTimeline[state.actionTimeline.length - 1];
+
+    // Deduplicate: if the last timeline step has the exact same stepName and details, reuse it!
+    if (lastStep && lastStep.stepName === stepName && lastStep.details === details) {
+      return lastStep.id;
+    }
+
     const id = `step_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const step: TimelineStep = {
       id,
@@ -178,8 +185,8 @@ export const useMailStore = create<MailStoreState>((set, get) => ({
       status: 'running',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     };
-    set((state) => ({
-      actionTimeline: [...state.actionTimeline, step],
+    set((s) => ({
+      actionTimeline: [...s.actionTimeline, step],
     }));
     return id;
   },

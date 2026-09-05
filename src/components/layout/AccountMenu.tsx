@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, UserCheck, LogOut, ShieldAlert } from 'lucide-react';
@@ -119,7 +119,7 @@ export function AccountMenu({ user, onSessionChange }: AccountMenuProps) {
 
             {/* Muted Section Label */}
             <div className="px-3 pt-2.5 pb-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6B6D73] font-sans">
+              <span className="text-[10px] font-semibold  text-[#6B6D73] font-sans">
                 ACCOUNT
               </span>
             </div>

@@ -1,4 +1,4 @@
-import { useMailStore } from '@/lib/store/useMailStore';
+﻿import { useMailStore } from '@/lib/store/useMailStore';
 import { EmailFilterParams, ComposeDraft } from '@/lib/gmail/types';
 
 /**
@@ -47,8 +47,7 @@ export async function commandSearchEmails(params: {
       const fetchedEmails = data.emails || [];
       store.setEmails(fetchedEmails);
 
-      // Auto-select top matching email so reading pane updates immediately!
-      if (fetchedEmails.length > 0) {
+      if (fetchedEmails.length > 0 && !store.selectedEmailId) {
         store.setSelectedEmailId(fetchedEmails[0].id);
       }
 
@@ -66,22 +65,27 @@ export async function commandSearchEmails(params: {
 
 export async function commandOpenEmail(params: { messageId: string }) {
   const store = useMailStore.getState();
+  const searchTarget = params.messageId.toLowerCase();
+
+  // Fuzzy matching to support database UUIDs, prefix IDs, and sender names
+  const existing = store.emails.find((e) => {
+    const idMatch = e.id === params.messageId || e.gmailMessageId === params.messageId;
+    const prefixMatch = e.gmailMessageId.toLowerCase().includes(searchTarget);
+    const senderMatch =
+      (searchTarget.includes('sarah') && e.sender.toLowerCase().includes('sarah')) ||
+      (searchTarget.includes('john') && e.sender.toLowerCase().includes('john')) ||
+      (searchTarget.includes('alex') && e.sender.toLowerCase().includes('alex'));
+    return idMatch || prefixMatch || senderMatch;
+  });
+
+  // If email is already selected, return cleanly without duplicating timeline entries
+  if (existing && store.selectedEmailId === existing.id) {
+    return { success: true, email: existing };
+  }
+
   const stepId = store.addTimelineStep('Opening email', `Target: ${params.messageId}`);
 
   try {
-    const searchTarget = params.messageId.toLowerCase();
-
-    // Fuzzy matching to support both database UUIDs, prefix IDs (msg_sarah_01), and sender names
-    const existing = store.emails.find((e) => {
-      const idMatch = e.id === params.messageId || e.gmailMessageId === params.messageId;
-      const prefixMatch = e.gmailMessageId.toLowerCase().includes(searchTarget);
-      const senderMatch =
-        (searchTarget.includes('sarah') && e.sender.toLowerCase().includes('sarah')) ||
-        (searchTarget.includes('john') && e.sender.toLowerCase().includes('john')) ||
-        (searchTarget.includes('alex') && e.sender.toLowerCase().includes('alex'));
-      return idMatch || prefixMatch || senderMatch;
-    });
-
     if (existing) {
       store.setSelectedEmailId(existing.id);
       store.updateTimelineStep(stepId, 'completed', `Opened "${existing.subject}"`);

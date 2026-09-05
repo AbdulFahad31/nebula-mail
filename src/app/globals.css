@@ -1,26 +1,26 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @layer utilities {
   .font-serif-display {
-    font-family: var(--font-fraunces), var(--font-source-serif), Georgia, serif;
+    font-family: var(--font-source-serif), Georgia, serif;
   }
   .font-sans {
-    font-family: var(--font-geist), var(--font-ibm-plex-sans), system-ui, sans-serif;
+    font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
   }
 }
 
-/* Scrollbar styling - cohesive dark track with quiet charcoal thumb */
+/* Scrollbar styling - quiet charcoal track */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #14161A;
+  background: #FAFAF8;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2A2D33;
+  background: #E5E3DC;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3A3E47;
+  background: #D8D6CE;
 }
