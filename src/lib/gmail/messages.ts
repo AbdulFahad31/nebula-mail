@@ -257,7 +257,7 @@ export async function getEmailsFromCache(
 
 export async function sendEmailService(userId: string, draft: ComposeDraft): Promise<EmailMessage> {
   const recipientStr = draft.to.join(', ');
-  const newMsgId = `sent_${Date.now()}`;
+  let finalGmailMsgId = `sent_${Date.now()}`;
   const threadId = draft.threadId || `thread_${Date.now()}`;
 
   const user = await db.user.findUnique({ where: { id: userId } });
@@ -293,13 +293,14 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
 
     if (res.data.id) {
       console.log(`[Gmail API] Live email sent successfully! Message ID: ${res.data.id}`);
+      finalGmailMsgId = res.data.id;
       await syncUserMessagesToCache(userId);
     }
   } catch (error: any) {
     console.warn('[Gmail API Send Fallback]:', error?.message || error);
   }
 
-  // Record in Prisma DB
+  // Ensure Thread exists in Prisma DB
   await db.thread.upsert({
     where: { gmailThreadId: threadId },
     update: { updatedAt: new Date() },
@@ -312,10 +313,19 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     },
   });
 
-  const created = await db.emailCache.create({
-    data: {
+  // Upsert into DB Cache using finalGmailMsgId to avoid duplicate rows
+  const created = await db.emailCache.upsert({
+    where: { gmailMessageId: finalGmailMsgId },
+    update: {
+      subject: draft.subject,
+      snippet: draft.body.substring(0, 100),
+      bodyText: draft.body,
+      bodyHtml: `<p>${draft.body.replace(/\n/g, '<br>')}</p>`,
+      isSent: true,
+    },
+    create: {
       userId,
-      gmailMessageId: newMsgId,
+      gmailMessageId: finalGmailMsgId,
       threadId,
       sender: `${senderName} <${senderEmail}>`,
       recipient: recipientStr,
@@ -345,7 +355,7 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     receivedAt: created.receivedAt.toISOString(),
     isRead: created.isRead,
     isSent: created.isSent,
-    labels: typeof created.labels === 'string' ? created.labels.split(',') : (created.labels as any) || [],
+    labels: ['SENT'],
   };
 }
 
@@ -490,7 +500,6 @@ export async function renewGmailWatchIfNeeded(userId: string): Promise<void> {
     console.warn(`[Watch Renewal] Skipped/fallback for ${userId}:`, error.message);
   }
 }
-
 
 export async function trashEmailService(userId: string, emailId: string): Promise<boolean> {
   const email = await db.emailCache.findFirst({
