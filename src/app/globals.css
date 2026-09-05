@@ -1,15 +1,13 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
-@layer utilities {
-  .font-serif-display {
-    font-family: var(--font-source-serif), Georgia, serif;
-  }
-  .font-sans {
-    font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
-  }
+.font-serif-display {
+  font-family: var(--font-source-serif), Georgia, serif;
 }
 
-/* Scrollbar styling - quiet charcoal track */
+.font-sans {
+  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+}
+
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
