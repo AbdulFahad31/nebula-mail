@@ -244,13 +244,18 @@ export async function commandSendEmail(params: {
 }) {
   const store = useMailStore.getState();
   
-  // Close any open compose drawer so only the AI Authorization Card is active
+  // 1. CAPTURE DRAFT DETAILS FIRST BEFORE CLOSING/RESETTING THE COMPOSE MODAL
+  const to = (params.to && params.to.length > 0) ? params.to : store.composeState.to;
+  const subject = params.subject !== undefined ? params.subject : store.composeState.subject;
+  const body = params.body !== undefined ? params.body : store.composeState.body;
+  const threadId = store.composeState.threadId;
+
+  // 2. NOW CLOSE AND RESET COMPOSE MODAL
   store.closeComposeModal();
 
-  const to = (params.to && params.to.length > 0) ? params.to : store.composeState.to;
-  const subject = params.subject || store.composeState.subject;
-  const body = params.body || store.composeState.body;
-  const threadId = store.composeState.threadId;
+  if (!to || to.length === 0) {
+    return { success: false, error: 'No recipient email specified' };
+  }
 
   return new Promise<{ success: boolean; requiresConfirmation: boolean }>((resolve) => {
     store.setConfirmationCard({

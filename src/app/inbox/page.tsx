@@ -61,6 +61,15 @@ export default function InboxPage() {
 
   // Save localStorage when layoutState changes (after mounted)
   useEffect(() => {
+    const unsubscribe = useMailStore.subscribe((state) => {
+      if (state.confirmationCard) {
+        setLayoutState((prev) => ({ ...prev, rightCollapsed: false }));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (!mounted) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutState));
