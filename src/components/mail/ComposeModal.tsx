@@ -70,7 +70,6 @@ export function ComposeModal() {
 
     setIsSending(true);
     try {
-      // Trigger Authorization Required Confirmation Card
       await commandSendEmail({
         to: addresses,
         subject: composeState.subject || '',

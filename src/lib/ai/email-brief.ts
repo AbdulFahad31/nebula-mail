@@ -89,7 +89,6 @@ export async function generateEmailBrief(emailData: {
   bodyText: string;
   bodyHtml?: string;
 }): Promise<EmailBrief> {
-  // Extract plain text & strip HTML tags, script, style, and markup noise
   let rawBody = emailData.bodyText || '';
   if (!rawBody && emailData.bodyHtml) {
     rawBody = emailData.bodyHtml;
@@ -102,7 +101,6 @@ export async function generateEmailBrief(emailData: {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Safe truncation limit
   const truncatedBody = cleanBody.slice(0, TRUNCATION_LIMIT);
 
   const prompt = `Subject: ${emailData.subject}
@@ -136,9 +134,6 @@ STRICT GROUNDING RULES:
   } catch (err: any) {
     const rawErrorStr = typeof err?.message === 'string' ? err.message : JSON.stringify(err);
     console.warn('[Brief Fallback] External AI providers failed, engaging local extractive brief generator:', rawErrorStr);
-    
-    // When external AI providers are unavailable (rate limited, quota exhausted, unconfigured, or offline),
-    // fall back gracefully to local extractive brief generation so user ALWAYS gets a valid brief!
     return generateLocalExtractiveBrief(emailData);
   }
 

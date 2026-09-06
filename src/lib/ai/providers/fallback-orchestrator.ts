@@ -91,19 +91,15 @@ export class FallbackOrchestrator {
           });
 
           if (!classification.isRetryable) {
-            // Non-retryable error on this provider (e.g. 401 auth failure, 400 bad request):
-            // Stop retrying this provider and move to the next provider in the chain.
             break;
           }
 
-          // If last provider and has another attempt left, retry once
           if (isLastProvider && attempt < attempts) {
             console.log(`[AI Fallback] Single retry on final provider '${provider.name}'...`);
             await new Promise((r) => setTimeout(r, 500));
             continue;
           }
 
-          // Move to next provider in priority chain
           break;
         }
       }

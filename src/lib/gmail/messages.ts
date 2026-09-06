@@ -8,7 +8,6 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
   try {
     const gmail = await getAuthenticatedGmailClient(userId);
 
-    // List recent 50 messages from Gmail API
     const response = await gmail.users.messages.list({
       userId: 'me',
       maxResults: 50,
@@ -30,7 +29,6 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
 
       const labelsStr = Array.isArray(parsed.labels) ? parsed.labels.join(',') : parsed.labels || 'INBOX';
 
-      // Ensure Thread exists in DB
       await db.thread.upsert({
         where: { gmailThreadId: parsed.threadId },
         update: {
@@ -49,7 +47,6 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
         },
       });
 
-      // Upsert Email in DB Cache
       await db.emailCache.upsert({
         where: { gmailMessageId: parsed.gmailMessageId },
         update: {
@@ -186,11 +183,9 @@ export async function getEmailsFromCache(
   userId: string,
   filters: EmailFilterParams = {}
 ): Promise<EmailMessage[]> {
-  // Check if user has a connected OAuth account or existing cached emails
   const oauthAccount = await db.oAuthAccount.findUnique({ where: { userId } });
   const count = await db.emailCache.count({ where: { userId } });
 
-  // If cache is empty for this user, trigger sync (if connected to Gmail) or fallback demo seed
   if (count === 0) {
     if (oauthAccount) {
       await syncUserMessagesToCache(userId);
@@ -347,7 +342,6 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     console.warn('[Gmail API Send Fallback]:', error?.message || error);
   }
 
-  // Ensure Thread exists in Prisma DB
   await db.thread.upsert({
     where: { gmailThreadId: threadId },
     update: { updatedAt: new Date() },
@@ -360,7 +354,6 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     },
   });
 
-  // Upsert into DB Cache using finalGmailMsgId to avoid duplicate rows
   const created = await db.emailCache.upsert({
     where: { gmailMessageId: finalGmailMsgId },
     update: {

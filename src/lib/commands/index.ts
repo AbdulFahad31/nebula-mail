@@ -33,7 +33,6 @@ export async function commandSearchEmails(params: {
 
     store.setFilterState(filters);
 
-    // Fetch matching data via API endpoint
     const queryParams = new URLSearchParams();
     if (params.from) queryParams.set('sender', params.from);
     if (params.keyword) queryParams.set('keyword', params.keyword);
@@ -68,7 +67,6 @@ export async function commandOpenEmail(params: { messageId?: string }) {
   const store = useMailStore.getState();
   const searchTarget = (params.messageId || '').toLowerCase().trim();
 
-  // Dynamic matching: exact ID, partial ID, sender match, or subject match
   const existing = store.emails.find((e) => {
     if (!searchTarget) return false;
     const idMatch = e.id === params.messageId || e.gmailMessageId === params.messageId;
@@ -85,7 +83,6 @@ export async function commandOpenEmail(params: { messageId?: string }) {
   if (targetToOpen) {
     store.setSelectedEmailId(targetToOpen.id);
 
-    // Mark as read in local state and trigger API update
     if (!targetToOpen.isRead) {
       const updated = store.emails.map((e) =>
         e.id === targetToOpen.id || e.gmailMessageId === targetToOpen.gmailMessageId
@@ -161,15 +158,11 @@ let isSendingLock = false;
 let lastSentHash = '';
 let lastSentTime = 0;
 
-/**
- * Execute email send directly & refresh inbox/sent list
- */
 export async function executeSendEmailDirect(to: string[], subject: string, body: string, threadId?: string, attachments?: EmailAttachment[]) {
   const store = useMailStore.getState();
   const payloadHash = `${to.join(',')}|${subject}|${body}`;
   const now = Date.now();
 
-  // Deduplication guard: prevent sending identical email twice within 3 seconds or concurrent execution
   if (isSendingLock || (payloadHash === lastSentHash && now - lastSentTime < 3000)) {
     console.warn('[executeSendEmailDirect] Blocked duplicate email send request');
     return { success: true };
@@ -197,10 +190,9 @@ export async function executeSendEmailDirect(to: string[], subject: string, body
     if (res.ok) {
       const data = await res.json();
       store.closeComposeModal();
-      store.clearAllFilters(); // Clear active search keyword filter so sent email is visible!
-      store.setActiveView('sent'); // Switch to sent view
+      store.clearAllFilters();
+      store.setActiveView('sent');
 
-      // Fetch fresh email list
       const listRes = await fetch('/api/mail/list?view=sent');
       if (listRes.ok) {
         const listData = await listRes.json();
@@ -230,14 +222,12 @@ export async function commandSendEmail(params: {
 }) {
   const store = useMailStore.getState();
   
-  // 1. CAPTURE DRAFT DETAILS FIRST BEFORE CLOSING/RESETTING THE COMPOSE MODAL
   const to = (params.to && params.to.length > 0) ? params.to : store.composeState.to;
   const subject = params.subject !== undefined ? params.subject : store.composeState.subject;
   const body = params.body !== undefined ? params.body : store.composeState.body;
   const threadId = store.composeState.threadId;
   const attachments = store.composeState.attachments;
 
-  // 2. NOW CLOSE AND RESET COMPOSE MODAL
   store.closeComposeModal();
 
   if (!to || to.length === 0) {

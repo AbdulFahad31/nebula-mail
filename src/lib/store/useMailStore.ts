@@ -175,7 +175,7 @@ export const useMailStore = create<MailStoreState>((set, get) => ({
     const state = get();
     const lastStep = state.actionTimeline[state.actionTimeline.length - 1];
 
-    // Deduplicate: if the last timeline step has the exact same stepName and details, reuse it!
+    // Deduplicate consecutive identical timeline steps
     if (lastStep && lastStep.stepName === stepName && lastStep.details === details) {
       return lastStep.id;
     }

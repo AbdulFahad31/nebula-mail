@@ -70,32 +70,32 @@ export function AssistantPanel({ onToggleCollapse, isCollapsed }: AssistantPanel
 
   const presetScenarios = [
     {
-      title: 'Search by sender & date',
-      description: 'Find emails from Sarah about Q3 report from last week',
+      title: 'Find recent project updates',
+      description: 'Search for emails from Sarah sent over the past week',
       prompt: 'Find emails from Sarah about Q3 report from last week',
       icon: Search,
     },
     {
-      title: 'Filter unread',
-      description: 'Find all unread emails in inbox',
+      title: 'Show unread messages',
+      description: 'Instantly filter your inbox down to unread mail',
       prompt: 'Find all unread emails',
       icon: Filter,
     },
     {
-      title: 'Populate compose modal',
-      description: 'Draft a reply saying "I will review this tomorrow"',
+      title: 'Draft a quick response',
+      description: 'Prepare a polite draft stating you will follow up tomorrow',
       prompt: 'Draft a reply to the latest email saying "I will review this tomorrow"',
       icon: PenSquare,
     },
     {
-      title: 'Send email with confirmation',
-      description: 'Send email to alex@example.com with project signoff',
+      title: 'Compose & send a message',
+      description: 'Send a project signoff update directly to Alex',
       prompt: 'Send an email to alex@example.com with subject "Project Update" and body "All deliverables are ready for review."',
       icon: SendHorizontal,
     },
     {
-      title: 'Multi-step tool chain',
-      description: 'Search emails about invoice and reply to sender',
+      title: 'Find & reply automatically',
+      description: 'Locate invoice correspondence and acknowledge receipt',
       prompt: 'Search emails about invoice and reply to the sender with "Received, thanks!"',
       icon: Layers,
     },

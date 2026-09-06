@@ -20,11 +20,9 @@ export function NebulaBrief({ email }: NebulaBriefProps) {
   const contentHash = `${email.id}_${email.receivedAt}`;
   const queryKey = ['emailBrief', email.id, contentHash];
 
-  // Check if brief was already generated & cached for THIS email in a prior click
   const cachedData = queryClient.getQueryData<{ brief: EmailBrief }>(queryKey);
   const isUserRequested = Boolean(requestedMap[email.id]);
 
-  // Enable query ONLY if user explicitly clicked "Generate Brief" for THIS email OR if cached data already exists
   const isEnabled = isUserRequested || Boolean(cachedData);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<{ brief: EmailBrief }>({
@@ -75,7 +73,6 @@ export function NebulaBrief({ email }: NebulaBriefProps) {
     });
   };
 
-  // 1. Collapsed default state: small "✨ Generate Brief" button
   if (!isEnabled && !data) {
     return (
       <div className="py-1">
@@ -91,7 +88,6 @@ export function NebulaBrief({ email }: NebulaBriefProps) {
     );
   }
 
-  // 2. Loading state: skeleton / shimmer card
   if (isLoading || (isFetching && !data)) {
     return (
       <div className="p-4 bg-[#1C1F24] border border-[#2A2D33] rounded-xl space-y-3 font-sans animate-pulse">
@@ -110,7 +106,6 @@ export function NebulaBrief({ email }: NebulaBriefProps) {
     );
   }
 
-  // 3. Error state
   if (isError || !data?.brief) {
     const errorMsg = error instanceof Error ? error.message : 'Unable to generate the brief.';
     return (
@@ -136,7 +131,6 @@ export function NebulaBrief({ email }: NebulaBriefProps) {
   const hasActionItems = brief.actionItems && brief.actionItems.length > 0;
   const hasKeyPoints = brief.keyPoints && brief.keyPoints.length > 0;
 
-  // 4. Expanded Brief Card
   return (
     <AnimatePresence>
       <motion.div

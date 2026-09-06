@@ -45,7 +45,6 @@ Rules:
         });
       }
 
-      // If GenAI/fallback did not emit function calls, fallback to deterministic rule parser
       return handleRuleBasedAssistant(prompt, currentOpenEmailId);
     } catch (genAiError: any) {
       console.warn('AI fallback chain error, falling back to smart intent parser:', genAiError?.message || genAiError);
@@ -61,11 +60,9 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
   const p = prompt.toLowerCase();
   const today = new Date();
 
-  // Extract explicit quote content if provided e.g. "I will review this tomorrow"
   const quoteMatch = prompt.match(/["']([^"']+)["']/);
   const quotedText = quoteMatch ? quoteMatch[1].trim() : null;
 
-  // Scenario 1: Draft/Populate Compose command (e.g. "Draft a reply saying 'I will review this tomorrow'")
   if (p.includes('draft') || p.includes('populate')) {
     const bodyText = quotedText || "I will review this tomorrow.";
     const to = ['john@example.com'];
@@ -80,7 +77,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 2: Compose & Direct Send from instruction
   if (p.includes('send an email') || p.includes('send email') || p.includes('compose')) {
     const toMatch = prompt.match(/to\s+([^\s]+@[^\s]+)/i);
     const subjectMatch = prompt.match(/subject\s+["']?([^"'\n]+?)["']?\s+(?:and|with|body|$)/i);
@@ -98,7 +94,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 3: Time-based search ("last 10 days")
   if (p.includes('last 10 days') || p.includes('10 days')) {
     const d = new Date(today);
     d.setDate(d.getDate() - 10);
@@ -110,7 +105,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 4: Multi-step tool chain ("Search emails about dsa and reply to the sender with Received, thanks!")
   if (p.includes('search') && p.includes('reply')) {
     const topicMatch = prompt.match(/(?:about|for|regarding)\s+["']?([^"'\n]+?)["']?\s+(?:and|with|reply|$)/i);
     const keyword = topicMatch ? topicMatch[1].trim() : (p.includes('invoice') ? 'invoice' : 'dsa');
@@ -124,7 +118,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 5: Context-aware reply ("Reply that I'll handle it tomorrow")
   if (p.includes('reply')) {
     const replyText = quotedText || (p.includes('handle it tomorrow') ? "I'll handle it tomorrow." : "I will review this tomorrow.");
 
@@ -134,7 +127,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 6a: Time-qualified unread filter ("unread emails from this week", "unread from last 10 days")
   const hasTimeKeyword = p.includes('week') || p.includes('day') || p.includes('days') || p.includes('since') || p.includes('after') || p.includes('last');
   
   if (p.includes('unread') && hasTimeKeyword) {
@@ -148,7 +140,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 6b: Plain unread filter without time qualifier ("show me unread emails")
   if (p.includes('unread')) {
     return NextResponse.json({
       reply: `Filtered inbox for unread emails.`,
@@ -156,7 +147,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 6c: Time range only without unread filter ("this week", "emails from this week")
   if (p.includes('this week')) {
     const d = new Date(today);
     d.setDate(d.getDate() - 7);
@@ -168,7 +158,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 7: Open / Search from specific sender or topic (e.g. "Open the email from google", "Open email from Sarah", "Search emails about Google")
   const openOrSearchMatch = prompt.match(/^(?:open|find|search|show|get|pull\s+up)\s+(?:the\s+)?(?:emails?|messages?|correspondence)?\s*(?:about|for|from|regarding)?\s+(.+)$/i);
   if (openOrSearchMatch) {
     let target = openOrSearchMatch[1].trim();
@@ -186,7 +175,6 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Default search fallback
   const keywordExtract = prompt
     .replace(/^(?:open|find|search|show|get|pull\s+up)\s+(?:the\s+)?(?:emails?|messages?|correspondence)?\s*(?:about|for|from|regarding)?/i, '')
     .trim() || prompt;
@@ -198,4 +186,3 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     ],
   });
 }
-

@@ -1,6 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -10,41 +10,47 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# Next.js & Build Output
 /.next/
 /out/
-
-# production
 /build
+*.tsbuildinfo
+next-env.d.ts
 
-# misc
+# Testing & Coverage
+/coverage
+test-results/
+playwright-report/
+
+# Databases & Local Data (must never be public)
+prisma/dev.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment Files
+.env*
+!.env.example
+
+# OS Files
 .DS_Store
+Thumbs.db
 *.pem
 
-# debug
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
-
-# vercel
+# Vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Personal Scratchpad
+scratch/
 
-test-results/
-playwright-report/
-
-# AI coding tool configurations
+# AI Coding Assistant Configurations & Metadata (Local Only)
 .agents/
 .claude/
 .cursor/
