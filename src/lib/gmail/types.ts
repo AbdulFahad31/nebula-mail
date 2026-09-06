@@ -1,3 +1,12 @@
+export interface EmailAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  base64?: string;
+  attachmentId?: string;
+}
+
 export interface EmailMessage {
   id: string;
   gmailMessageId: string;
@@ -6,6 +15,7 @@ export interface EmailMessage {
   senderName?: string;
   senderEmail: string;
   recipient: string;
+  cc?: string;
   subject: string;
   snippet: string;
   bodyText?: string;
@@ -14,6 +24,7 @@ export interface EmailMessage {
   isRead: boolean;
   isSent: boolean;
   labels: string[];
+  attachments?: EmailAttachment[];
 }
 
 export interface ThreadItem {
@@ -48,4 +59,5 @@ export interface ComposeDraft {
   body: string;
   replyToMessageId?: string;
   threadId?: string;
+  attachments?: EmailAttachment[];
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 import { ALL_TOOLS } from '@/lib/ai/gemini';
+import { fallbackOrchestrator } from '@/lib/ai/providers/fallback-orchestrator';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,15 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey || apiKey.includes('your-gemini-api-key')) {
-      return handleRuleBasedAssistant(prompt, currentOpenEmailId);
-    }
-
     try {
-      const ai = new GoogleGenAI({ apiKey });
-
       const systemInstruction = `You are Nebula Mail's AI UI Assistant. You CONTROL the mail application UI by invoking tool calls.
 Current UI Context:
 - Currently open email ID: ${currentOpenEmailId || 'None'}
@@ -27,38 +19,36 @@ Current UI Context:
 Rules:
 1. NEVER reply in plain text if a tool call can achieve the user's intent. ALWAYS invoke the appropriate function tools.
 2. For compose requests ("Send email to X..."): invoke open_compose, populate_compose, and send_email.
-3. For time search ("emails from last 10 days"): calculate date range and call apply_email_filter or search_emails.
-4. For person search ("email from Sarah..."): call search_emails and then open_email.
-5. For context-aware reply ("Reply that..."): call reply_to_email using current open email.
-6. For compound filter ("unread from this week"): call apply_email_filter.`;
+3. For search requests ("emails from last 10 days", "who sent me something about DSA"): extract arguments (from, keyword, subject, isUnread, after, before) and call search_emails.
+4. For multi-step search & reply requests ("Search emails about X and reply with Y"): call search_emails with extracted keyword/from, open_email (omit messageId if unknown), and reply_to_email with body text Y. NEVER invent fake message IDs.
+5. For person/topic search ("email from Sarah...", "anything from Google regarding account"): call search_emails with extracted from/keyword parameters.
+6. For context-aware reply ("Reply that..."): call reply_to_email using current open email or search result.
+7. For compound filter ("unread from this week"): call apply_email_filter with { isUnread: true, startDate }.
+8. For plain unread search ("show me unread emails"): call apply_email_filter with ONLY { isUnread: true }. NEVER add startDate or after unless explicitly asked.
+9. Do NOT hardcode fictional message IDs like 'msg_alex_03' or 'msg_sarah_01'.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          tools: [{ functionDeclarations: ALL_TOOLS }],
-        },
+      const response = await fallbackOrchestrator.generateContent({
+        prompt,
+        systemInstruction,
+        tools: ALL_TOOLS,
       });
 
-      const functionCalls = response.functionCalls;
-
-      if (functionCalls && functionCalls.length > 0) {
-        const toolCalls = functionCalls.map((fc) => ({
-          name: fc.name,
-          args: fc.args,
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        const toolCalls = response.toolCalls.map((tc) => ({
+          name: tc.name,
+          args: tc.arguments,
         }));
 
         return NextResponse.json({
-          reply: `Invoked ${functionCalls.length} tool(s) to execute your request.`,
+          reply: `Invoked ${toolCalls.length} tool(s) to execute your request.`,
           toolCalls,
         });
       }
 
-      // If GenAI did not emit function calls, fallback to deterministic rule parser
+      // If GenAI/fallback did not emit function calls, fallback to deterministic rule parser
       return handleRuleBasedAssistant(prompt, currentOpenEmailId);
     } catch (genAiError: any) {
-      console.warn('Gemini API call error, falling back to smart intent parser:', genAiError?.message || genAiError);
+      console.warn('AI fallback chain error, falling back to smart intent parser:', genAiError?.message || genAiError);
       return handleRuleBasedAssistant(prompt, currentOpenEmailId);
     }
   } catch (error: any) {
@@ -120,51 +110,21 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 4: Multi-step tool chain ("Search emails about invoice and reply to the sender with Received, thanks!")
-  if (p.includes('invoice') || (p.includes('search') && p.includes('reply'))) {
+  // Scenario 4: Multi-step tool chain ("Search emails about dsa and reply to the sender with Received, thanks!")
+  if (p.includes('search') && p.includes('reply')) {
+    const topicMatch = prompt.match(/(?:about|for|regarding)\s+["']?([^"'\n]+?)["']?\s+(?:and|with|reply|$)/i);
+    const keyword = topicMatch ? topicMatch[1].trim() : (p.includes('invoice') ? 'invoice' : 'dsa');
     const replyText = quotedText || "Received, thanks!";
     return NextResponse.json({
-      reply: `Searched invoice emails, opened correspondence, and prepared reply: "${replyText}".`,
+      reply: `Searched ${keyword} emails, opened correspondence, and prepared reply: "${replyText}".`,
       toolCalls: [
-        { name: 'search_emails', args: { keyword: 'invoice' } },
-        { name: 'open_email', args: { messageId: 'msg_alex_03' } },
-        { name: 'reply_to_email', args: { messageId: 'msg_alex_03', body: replyText } },
+        { name: 'search_emails', args: { keyword } },
+        { name: 'reply_to_email', args: { body: replyText } },
       ],
     });
   }
 
-  // Scenario 5: Person/topic search ("email from Sarah", "Q3", "John", "Alex")
-  if (p.includes('sarah') || p.includes('project update') || p.includes('q3')) {
-    return NextResponse.json({
-      reply: `Found and opened latest email from Sarah regarding Q3 Nebula Project Update.`,
-      toolCalls: [
-        { name: 'search_emails', args: { from: 'Sarah', keyword: 'Q3' } },
-        { name: 'open_email', args: { messageId: 'msg_sarah_01' } },
-      ],
-    });
-  }
-
-  if (p.includes('john') || p.includes('meeting')) {
-    return NextResponse.json({
-      reply: `Found and opened email from John Miller.`,
-      toolCalls: [
-        { name: 'search_emails', args: { from: 'John', keyword: 'Meeting' } },
-        { name: 'open_email', args: { messageId: 'msg_john_02' } },
-      ],
-    });
-  }
-
-  if (p.includes('alex') || p.includes('security') || p.includes('audit')) {
-    return NextResponse.json({
-      reply: `Found and opened email from Alex Rivera regarding Security Audit.`,
-      toolCalls: [
-        { name: 'search_emails', args: { from: 'Alex', keyword: 'Security' } },
-        { name: 'open_email', args: { messageId: 'msg_alex_03' } },
-      ],
-    });
-  }
-
-  // Scenario 6: Context-aware reply ("Reply that I'll handle it tomorrow")
+  // Scenario 5: Context-aware reply ("Reply that I'll handle it tomorrow")
   if (p.includes('reply')) {
     const replyText = quotedText || (p.includes('handle it tomorrow') ? "I'll handle it tomorrow." : "I will review this tomorrow.");
 
@@ -174,8 +134,10 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Scenario 7: Natural language compound filter ("unread emails from this week")
-  if (p.includes('unread') || p.includes('this week')) {
+  // Scenario 6a: Time-qualified unread filter ("unread emails from this week", "unread from last 10 days")
+  const hasTimeKeyword = p.includes('week') || p.includes('day') || p.includes('days') || p.includes('since') || p.includes('after') || p.includes('last');
+  
+  if (p.includes('unread') && hasTimeKeyword) {
     const d = new Date(today);
     d.setDate(d.getDate() - 7);
     const startDate = d.toISOString().split('T')[0];
@@ -186,13 +148,32 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Default fallback search: clean query string to keywords
-  const cleanKeyword = prompt.replace(/find|emails?|from|about|search|for|show|me|last|week/gi, '').trim() || prompt;
+  // Scenario 6b: Plain unread filter without time qualifier ("show me unread emails")
+  if (p.includes('unread')) {
+    return NextResponse.json({
+      reply: `Filtered inbox for unread emails.`,
+      toolCalls: [{ name: 'apply_email_filter', args: { isUnread: true } }],
+    });
+  }
+
+  // Scenario 6c: Time range only without unread filter ("this week", "emails from this week")
+  if (p.includes('this week')) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 7);
+    const startDate = d.toISOString().split('T')[0];
+
+    return NextResponse.json({
+      reply: `Filtered inbox for emails received this week.`,
+      toolCalls: [{ name: 'apply_email_filter', args: { startDate } }],
+    });
+  }
+
+  // Default search: extract keyword safely without destructive string regex replacement
+  const keywordExtract = prompt.replace(/^(?:find|search|show|get|pull\s+up)\s+(?:emails?|messages?|correspondence)?\s*(?:about|for|from|regarding)?/i, '').trim() || prompt;
   return NextResponse.json({
-    reply: `Searched inbox for "${cleanKeyword}".`,
+    reply: `Searched inbox for "${keywordExtract}".`,
     toolCalls: [
-      { name: 'search_emails', args: { keyword: cleanKeyword } },
-      { name: 'open_email', args: { messageId: cleanKeyword } },
+      { name: 'search_emails', args: { keyword: keywordExtract } },
     ],
   });
 }

@@ -1,5 +1,5 @@
 import { gmail_v1 } from 'googleapis';
-import { EmailMessage } from './types';
+import { EmailMessage, EmailAttachment } from './types';
 
 export function parseGmailMessage(msg: gmail_v1.Schema$Message): EmailMessage {
   const payload = msg.payload;
@@ -10,16 +10,17 @@ export function parseGmailMessage(msg: gmail_v1.Schema$Message): EmailMessage {
 
   const rawFrom = getHeader('From');
   const recipient = getHeader('To');
+  const cc = getHeader('Cc') || undefined;
   const subject = getHeader('Subject') || '(No Subject)';
   const dateHeader = getHeader('Date');
 
   let senderName = rawFrom;
   let senderEmail = rawFrom;
 
-  const match = rawFrom.match(/^(?:"?([^"]*)"?\s)?<([^>]+)>$/);
+  const match = rawFrom.match(/^(?:"?([^"]*)"?s)?<([^>]+)>$/);
   if (match) {
-    senderName = match[1] || match[2];
-    senderEmail = match[2];
+    senderName = (match[1] || match[2]).trim();
+    senderEmail = match[2].trim();
   }
 
   const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString();
@@ -29,21 +30,30 @@ export function parseGmailMessage(msg: gmail_v1.Schema$Message): EmailMessage {
 
   let bodyText = '';
   let bodyHtml = '';
+  const attachments: EmailAttachment[] = [];
 
-  const extractBody = (part: gmail_v1.Schema$MessagePart) => {
-    if (part.mimeType === 'text/plain' && part.body?.data) {
+  const extractContent = (part: gmail_v1.Schema$MessagePart) => {
+    if (part.filename && part.filename.trim().length > 0) {
+      attachments.push({
+        id: part.body?.attachmentId || `att_${Math.random().toString(36).substring(2, 9)}`,
+        attachmentId: part.body?.attachmentId || undefined,
+        filename: part.filename,
+        mimeType: part.mimeType || 'application/octet-stream',
+        size: part.body?.size || 0,
+      });
+    } else if (part.mimeType === 'text/plain' && part.body?.data) {
       bodyText += Buffer.from(part.body.data, 'base64url').toString('utf8');
     } else if (part.mimeType === 'text/html' && part.body?.data) {
       bodyHtml += Buffer.from(part.body.data, 'base64url').toString('utf8');
     }
 
     if (part.parts) {
-      part.parts.forEach(extractBody);
+      part.parts.forEach(extractContent);
     }
   };
 
   if (payload) {
-    extractBody(payload);
+    extractContent(payload);
   }
 
   return {
@@ -54,6 +64,7 @@ export function parseGmailMessage(msg: gmail_v1.Schema$Message): EmailMessage {
     senderName,
     senderEmail,
     recipient,
+    cc,
     subject,
     snippet: msg.snippet || '',
     bodyText: bodyText || msg.snippet || '',
@@ -62,5 +73,6 @@ export function parseGmailMessage(msg: gmail_v1.Schema$Message): EmailMessage {
     isRead,
     isSent,
     labels,
+    attachments: attachments.length > 0 ? attachments : undefined,
   };
 }

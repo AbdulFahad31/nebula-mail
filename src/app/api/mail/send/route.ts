@@ -3,11 +3,21 @@ import { getSession } from '@/lib/auth/session';
 import { sendEmailService } from '@/lib/gmail/messages';
 import { z } from 'zod';
 
+const AttachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  mimeType: z.string(),
+  size: z.number(),
+  base64: z.string().optional(),
+  attachmentId: z.string().optional(),
+});
+
 const SendRequestSchema = z.object({
   to: z.array(z.string().email()),
   subject: z.string(),
   body: z.string(),
   threadId: z.string().optional(),
+  attachments: z.array(AttachmentSchema).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -23,6 +33,7 @@ export async function POST(req: NextRequest) {
       subject: validated.subject,
       body: validated.body,
       threadId: validated.threadId,
+      attachments: validated.attachments,
     });
 
     return NextResponse.json({ success: true, email });

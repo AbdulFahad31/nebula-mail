@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { EmailMessage, EmailFilterParams, ComposeDraft } from '@/lib/gmail/types';
+import { EmailMessage, EmailFilterParams, ComposeDraft, EmailAttachment } from '@/lib/gmail/types';
 
 export interface TimelineStep {
   id: string;
@@ -20,6 +20,7 @@ export interface ConfirmationModalState {
     body: string;
     messageId?: string;
     threadId?: string;
+    attachments?: EmailAttachment[];
   };
   onConfirm: () => Promise<void>;
   onCancel: () => void;
@@ -43,6 +44,7 @@ interface MailStoreState {
     body: string;
     replyToMessageId?: string;
     threadId?: string;
+    attachments?: EmailAttachment[];
   };
 
   // AI Activity & Confirmation Cards
@@ -165,6 +167,7 @@ export const useMailStore = create<MailStoreState>((set, get) => ({
         body: '',
         replyToMessageId: undefined,
         threadId: undefined,
+        attachments: undefined,
       },
     })),
 

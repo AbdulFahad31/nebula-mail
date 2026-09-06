@@ -1,3 +1,4 @@
+import { EmailAttachment } from '@/lib/gmail/types';
 import { useMailStore } from '@/lib/store/useMailStore';
 import { EmailFilterParams, ComposeDraft } from '@/lib/gmail/types';
 
@@ -63,59 +64,43 @@ export async function commandSearchEmails(params: {
   }
 }
 
-export async function commandOpenEmail(params: { messageId: string }) {
+export async function commandOpenEmail(params: { messageId?: string }) {
   const store = useMailStore.getState();
-  const searchTarget = params.messageId.toLowerCase();
+  const searchTarget = (params.messageId || '').toLowerCase().trim();
 
-  // Fuzzy matching to support database UUIDs, prefix IDs, and sender names
+  // Dynamic matching: exact ID, partial ID, sender match, or subject match
   const existing = store.emails.find((e) => {
+    if (!searchTarget) return false;
     const idMatch = e.id === params.messageId || e.gmailMessageId === params.messageId;
-    const prefixMatch = e.gmailMessageId.toLowerCase().includes(searchTarget);
-    const senderMatch =
-      (searchTarget.includes('sarah') && e.sender.toLowerCase().includes('sarah')) ||
-      (searchTarget.includes('john') && e.sender.toLowerCase().includes('john')) ||
-      (searchTarget.includes('alex') && e.sender.toLowerCase().includes('alex'));
-    return idMatch || prefixMatch || senderMatch;
+    const prefixMatch = e.gmailMessageId.toLowerCase().includes(searchTarget) || e.id.toLowerCase().includes(searchTarget);
+    const senderMatch = e.sender.toLowerCase().includes(searchTarget) || (e.senderName && e.senderName.toLowerCase().includes(searchTarget));
+    const subjectMatch = e.subject.toLowerCase().includes(searchTarget);
+    return idMatch || prefixMatch || senderMatch || subjectMatch;
   });
 
-  const stepId = store.addTimelineStep('Opening email', `Target: ${params.messageId}`);
+  const stepId = store.addTimelineStep('Opening email', `Target: ${params.messageId || 'Top result'}`);
 
-  if (existing) {
-    store.setSelectedEmailId(existing.id);
+  const targetToOpen = existing || store.emails[0];
+
+  if (targetToOpen) {
+    store.setSelectedEmailId(targetToOpen.id);
 
     // Mark as read in local state and trigger API update
-    if (!existing.isRead) {
+    if (!targetToOpen.isRead) {
       const updated = store.emails.map((e) =>
-        e.id === existing.id || e.gmailMessageId === existing.gmailMessageId
+        e.id === targetToOpen.id || e.gmailMessageId === targetToOpen.gmailMessageId
           ? { ...e, isRead: true }
           : e
       );
       store.setEmails(updated);
-      fetch(`/api/mail/${existing.id}`).catch(() => {});
+      fetch(`/api/mail/${targetToOpen.id}`).catch(() => {});
     }
 
-    store.updateTimelineStep(stepId, 'completed', `Opened "${existing.subject}"`);
-    return { success: true, email: existing };
+    store.updateTimelineStep(stepId, 'completed', `Opened "${targetToOpen.subject}"`);
+    return { success: true, email: targetToOpen };
   }
 
-  // Fallback: select first email in store if list is filtered
-  if (store.emails.length > 0) {
-    const fallback = store.emails[0];
-    store.setSelectedEmailId(fallback.id);
-
-    if (!fallback.isRead) {
-      const updated = store.emails.map((e) =>
-        e.id === fallback.id ? { ...e, isRead: true } : e
-      );
-      store.setEmails(updated);
-      fetch(`/api/mail/${fallback.id}`).catch(() => {});
-    }
-
-    store.updateTimelineStep(stepId, 'completed', `Opened "${fallback.subject}"`);
-    return { success: true, email: fallback };
-  }
-
-  store.updateTimelineStep(stepId, 'failed', `Email not found: ${params.messageId}`);
+  store.updateTimelineStep(stepId, 'failed', `Email not found: ${params.messageId || 'No emails match active filter'}`);
   return { success: false, error: 'Email not found' };
 }
 
@@ -179,7 +164,7 @@ let lastSentTime = 0;
 /**
  * Execute email send directly & refresh inbox/sent list
  */
-export async function executeSendEmailDirect(to: string[], subject: string, body: string, threadId?: string) {
+export async function executeSendEmailDirect(to: string[], subject: string, body: string, threadId?: string, attachments?: EmailAttachment[]) {
   const store = useMailStore.getState();
   const payloadHash = `${to.join(',')}|${subject}|${body}`;
   const now = Date.now();
@@ -205,6 +190,7 @@ export async function executeSendEmailDirect(to: string[], subject: string, body
         subject,
         body,
         threadId,
+        attachments,
       }),
     });
 
@@ -249,6 +235,7 @@ export async function commandSendEmail(params: {
   const subject = params.subject !== undefined ? params.subject : store.composeState.subject;
   const body = params.body !== undefined ? params.body : store.composeState.body;
   const threadId = store.composeState.threadId;
+  const attachments = store.composeState.attachments;
 
   // 2. NOW CLOSE AND RESET COMPOSE MODAL
   store.closeComposeModal();
@@ -267,9 +254,13 @@ export async function commandSendEmail(params: {
         to,
         subject,
         body,
+        threadId,
+        attachments,
       },
       onConfirm: async () => {
-        const result = await executeSendEmailDirect(to, subject, body, threadId);
+        const currentCard = useMailStore.getState().confirmationCard;
+        const finalAttachments = currentCard?.payload.attachments || attachments;
+        const result = await executeSendEmailDirect(to, subject, body, threadId, finalAttachments);
         store.setConfirmationCard(null);
         resolve({ success: result.success, requiresConfirmation: false });
       },
@@ -284,18 +275,16 @@ export async function commandSendEmail(params: {
 export async function commandReplyEmail(params: { messageId?: string; body: string }) {
   const store = useMailStore.getState();
 
-  const targetId = (params.messageId || store.selectedEmailId || '').toLowerCase();
+  const targetId = (params.messageId || '').toLowerCase().trim();
 
   const targetEmail =
     store.emails.find((e) => {
       if (!targetId) return false;
       const idMatch = e.id === params.messageId || e.gmailMessageId === params.messageId;
-      const prefixMatch = e.gmailMessageId.toLowerCase().includes(targetId);
-      const senderMatch =
-        (targetId.includes('alex') && e.sender.toLowerCase().includes('alex')) ||
-        (targetId.includes('sarah') && e.sender.toLowerCase().includes('sarah')) ||
-        (targetId.includes('john') && e.sender.toLowerCase().includes('john'));
-      return idMatch || prefixMatch || senderMatch;
+      const prefixMatch = e.gmailMessageId.toLowerCase().includes(targetId) || e.id.toLowerCase().includes(targetId);
+      const senderMatch = e.sender.toLowerCase().includes(targetId) || (e.senderName && e.senderName.toLowerCase().includes(targetId));
+      const subjectMatch = e.subject.toLowerCase().includes(targetId);
+      return idMatch || prefixMatch || senderMatch || subjectMatch;
     }) ||
     (store.selectedEmailId ? store.emails.find((e) => e.id === store.selectedEmailId) : store.emails[0]);
 
@@ -322,7 +311,9 @@ export async function commandReplyEmail(params: { messageId?: string; body: stri
         threadId: targetEmail.threadId,
       },
       onConfirm: async () => {
-        const result = await executeSendEmailDirect(replyTo, replySubject, params.body, targetEmail.threadId);
+        const currentCard = useMailStore.getState().confirmationCard;
+        const finalAttachments = currentCard?.payload.attachments;
+        const result = await executeSendEmailDirect(replyTo, replySubject, params.body, targetEmail.threadId, finalAttachments);
         store.setConfirmationCard(null);
         resolve({ success: result.success, requiresConfirmation: false });
       },

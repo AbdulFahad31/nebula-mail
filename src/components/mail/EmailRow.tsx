@@ -4,6 +4,7 @@ import React from 'react';
 import { EmailMessage } from '@/lib/gmail/types';
 import { useMailStore } from '@/lib/store/useMailStore';
 import { commandOpenEmail, commandDeleteEmail, commandRestoreEmail, commandPermanentlyDeleteEmail } from '@/lib/commands';
+import { getRecipientDisplayInfo } from '@/lib/gmail/contacts';
 import { Trash2, RotateCcw } from 'lucide-react';
 
 interface EmailRowProps {
@@ -21,6 +22,8 @@ function getAvatarStyles(name: string) {
 export function EmailRow({ email }: EmailRowProps) {
   const { selectedEmailId, activeView } = useMailStore();
   const isSelected = selectedEmailId === email.id || selectedEmailId === email.gmailMessageId;
+
+  const isSentView = activeView === 'sent' || email.isSent;
 
   const formattedDate = new Date(email.receivedAt).toLocaleDateString(undefined, {
     month: 'short',
@@ -46,8 +49,20 @@ export function EmailRow({ email }: EmailRowProps) {
     commandPermanentlyDeleteEmail({ messageId: email.id });
   };
 
-  const displayName = email.senderName || email.sender;
-  const avatar = getAvatarStyles(displayName);
+  let displayName: string;
+  let avatarName: string;
+
+  if (isSentView) {
+    const recipientInfo = getRecipientDisplayInfo(email.recipient);
+    displayName = recipientInfo.displayName;
+    avatarName = recipientInfo.avatarName;
+  } else {
+    displayName = email.senderName || email.sender;
+    avatarName = displayName;
+  }
+
+  const avatar = getAvatarStyles(avatarName);
+  const avatarLetter = (avatarName.replace(/^To:s*/i, '').trim().charAt(0) || 'U').toUpperCase();
 
   return (
     <div
@@ -67,7 +82,7 @@ export function EmailRow({ email }: EmailRowProps) {
       <div
         className={`w-7 h-7 rounded-full border ${avatar.bg} ${avatar.border} ${avatar.text} flex items-center justify-center text-xs font-serif-display font-semibold shrink-0 mt-0.5 transition-transform duration-150 group-hover:scale-[1.03]`}
       >
-        {displayName.charAt(0).toUpperCase()}
+        {avatarLetter}
       </div>
 
       <div className="flex-1 min-w-0 space-y-0.5">

@@ -28,6 +28,8 @@ export function useEmails() {
 }
 
 export function useEmailDetail(messageId: string | null) {
+  const queryClient = useQueryClient();
+
   return useQuery<EmailMessage | null>({
     queryKey: ['email', messageId],
     queryFn: async () => {
@@ -35,7 +37,11 @@ export function useEmailDetail(messageId: string | null) {
       const res = await fetch(`/api/mail/${messageId}`);
       if (!res.ok) throw new Error('Failed to fetch message details');
       const data = await res.json();
-      return data.email || null;
+      const email = data.email || null;
+      if (email) {
+        queryClient.invalidateQueries({ queryKey: ['emails'] });
+      }
+      return email;
     },
     enabled: !!messageId,
   });
@@ -59,6 +65,37 @@ export function useSendEmailMutation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
+    },
+  });
+}
+
+export function useSyncStatus() {
+  return useQuery<{ lastSyncedAt: string | null }>({
+    queryKey: ['syncStatus'],
+    queryFn: async () => {
+      const res = await fetch('/api/sync/status');
+      if (!res.ok) return { lastSyncedAt: null };
+      return res.json();
+    },
+    refetchInterval: 15000,
+  });
+}
+
+export function useSyncRefreshMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/sync/refresh', { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to sync with Gmail');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+      queryClient.invalidateQueries({ queryKey: ['syncStatus'] });
     },
   });
 }

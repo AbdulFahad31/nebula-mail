@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useMailStore } from '@/lib/store/useMailStore';
-import { useEmails } from '@/lib/hooks/useMailQueries';
+import { useEmails, useSyncRefreshMutation } from '@/lib/hooks/useMailQueries';
 import { EmailRow } from './EmailRow';
 import { SmartFilterChips } from './SmartFilterChips';
 import { Search, RefreshCw, PanelLeftClose } from 'lucide-react';
@@ -16,9 +16,23 @@ export function InboxList({ onToggleCollapse }: InboxListProps = {}) {
   const { activeView, setActiveView, setEmails } = useMailStore();
   const [searchInput, setSearchInput] = useState('');
 
-  // TanStack Query for server state
+  // TanStack Query for server state & sync state
   const { data: emailsData, isLoading, refetch } = useEmails();
+  const syncRefresh = useSyncRefreshMutation();
+
   const emails = emailsData || [];
+
+  // 1. POLLING FALLBACK: Poll Gmail API sync endpoint every 20 seconds silently in the background
+  useEffect(() => {
+    // Initial sync check on mount
+    syncRefresh.mutate();
+
+    const interval = setInterval(() => {
+      syncRefresh.mutate();
+    }, 20000); // 20s interval fallback for local dev / missed push webhooks
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Sync to store for instant command access
   useEffect(() => {
@@ -26,6 +40,20 @@ export function InboxList({ onToggleCollapse }: InboxListProps = {}) {
       setEmails(emailsData);
     }
   }, [emailsData, setEmails]);
+
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+
+  const handleManualRefresh = async () => {
+    setIsManualSyncing(true);
+    try {
+      await syncRefresh.mutateAsync();
+      await refetch();
+    } catch (e) {
+      console.error('Manual refresh error:', e);
+    } finally {
+      setIsManualSyncing(false);
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,11 +102,12 @@ export function InboxList({ onToggleCollapse }: InboxListProps = {}) {
 
           <div className="flex items-center gap-1">
             <button
-              onClick={() => refetch()}
-              className="p-1 text-[#6B6D73] hover:text-[#EDECE8] transition-colors"
+              onClick={handleManualRefresh}
+              disabled={isManualSyncing}
+              className="p-1 text-[#6B6D73] hover:text-[#EDECE8] transition-colors disabled:opacity-50"
               title="Refresh messages"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#6B9971]' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin text-[#6B9971]' : ''}`} />
             </button>
             {onToggleCollapse && (
               <button

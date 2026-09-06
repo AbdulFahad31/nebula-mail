@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { db } from '@/lib/db/prisma';
+import { markEmailAsReadService } from '@/lib/gmail/messages';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -19,12 +20,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    // Mark as read when retrieved
+    // Mark as read when retrieved & remove UNREAD label in Gmail API
     if (!email.isRead) {
-      await db.emailCache.update({
-        where: { id: email.id },
-        data: { isRead: true },
-      });
+      await markEmailAsReadService(userId, email.id);
     }
 
     return NextResponse.json({
@@ -44,6 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         isRead: true,
         isSent: email.isSent,
         labels: email.labels,
+        attachments: email.attachmentsJson ? JSON.parse(email.attachmentsJson) : undefined,
       },
     });
   } catch (error: any) {

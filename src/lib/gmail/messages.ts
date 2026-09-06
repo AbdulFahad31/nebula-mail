@@ -63,6 +63,7 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
           isRead: parsed.isRead,
           isSent: parsed.isSent,
           labels: labelsStr,
+          attachmentsJson: parsed.attachments ? JSON.stringify(parsed.attachments) : null,
         },
         create: {
           userId,
@@ -81,6 +82,12 @@ export async function syncUserMessagesToCache(userId: string): Promise<EmailMess
         },
       });
     }
+
+    await db.syncState.upsert({
+      where: { userId },
+      update: { lastSyncedAt: new Date() },
+      create: { userId, historyId: '1000', lastSyncedAt: new Date() },
+    });
 
     return parsedEmails;
   } catch (error) {
@@ -171,6 +178,7 @@ export async function seedDemoCache(userId: string): Promise<EmailMessage[]> {
     isRead: c.isRead,
     isSent: c.isSent,
     labels: typeof c.labels === 'string' ? c.labels.split(',') : (c.labels as any) || [],
+    attachments: c.attachmentsJson ? JSON.parse(c.attachmentsJson) : undefined,
   }));
 }
 
@@ -208,19 +216,6 @@ export async function getEmailsFromCache(
     whereClause.isRead = !filters.isUnread;
   }
 
-  if (filters.sender) {
-    whereClause.sender = { contains: filters.sender };
-  }
-
-  if (filters.keyword) {
-    whereClause.OR = [
-      { subject: { contains: filters.keyword } },
-      { snippet: { contains: filters.keyword } },
-      { bodyText: { contains: filters.keyword } },
-      { sender: { contains: filters.keyword } },
-    ];
-  }
-
   if (filters.startDate || filters.after) {
     const afterDate = new Date(filters.startDate || filters.after!);
     whereClause.receivedAt = { ...(whereClause.receivedAt || {}), gte: afterDate };
@@ -231,10 +226,27 @@ export async function getEmailsFromCache(
     whereClause.receivedAt = { ...(whereClause.receivedAt || {}), lte: beforeDate };
   }
 
-  const cached = await db.emailCache.findMany({
+  let cached = await db.emailCache.findMany({
     where: whereClause,
     orderBy: { receivedAt: 'desc' },
   });
+
+  if (filters.sender) {
+    const s = filters.sender.toLowerCase();
+    cached = cached.filter((c) => c.sender.toLowerCase().includes(s));
+  }
+
+  if (filters.keyword) {
+    const kw = filters.keyword.toLowerCase();
+    cached = cached.filter(
+      (c) =>
+        (c.subject && c.subject.toLowerCase().includes(kw)) ||
+        (c.snippet && c.snippet.toLowerCase().includes(kw)) ||
+        (c.bodyText && c.bodyText.toLowerCase().includes(kw)) ||
+        (c.sender && c.sender.toLowerCase().includes(kw)) ||
+        (c.recipient && c.recipient.toLowerCase().includes(kw))
+    );
+  }
 
   return cached.map((c) => ({
     id: c.id,
@@ -252,6 +264,7 @@ export async function getEmailsFromCache(
     isRead: c.isRead,
     isSent: c.isSent,
     labels: typeof c.labels === 'string' ? c.labels.split(',') : (c.labels as any) || [],
+    attachments: c.attachmentsJson ? JSON.parse(c.attachmentsJson) : undefined,
   }));
 }
 
@@ -264,18 +277,52 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
   const senderEmail = user?.email || 'me@nebulamail.app';
   const senderName = user?.name || senderEmail.split('@')[0];
 
+  const hasAttachments = Boolean(draft.attachments && draft.attachments.length > 0);
+  const attachmentsJson = hasAttachments ? JSON.stringify(draft.attachments) : null;
+
   try {
     const gmail = await getAuthenticatedGmailClient(userId);
 
-    const rawMessage = [
-      `From: ${senderName} <${senderEmail}>`,
-      `To: ${recipientStr}`,
-      `Subject: ${draft.subject}`,
-      `Content-Type: text/html; charset=utf-8`,
-      `MIME-Version: 1.0`,
-      ``,
-      `<p>${draft.body.replace(/\n/g, '<br>')}</p>`,
-    ].join('\r\n');
+    let rawMessage: string;
+    if (hasAttachments) {
+      const boundary = `====_Nebula_Boundary_${Date.now()}_====`;
+      const mimeParts: string[] = [
+        `From: ${senderName} <${senderEmail}>`,
+        `To: ${recipientStr}`,
+        `Subject: ${draft.subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: multipart/mixed; boundary="${boundary}"`,
+        ``,
+        `--${boundary}`,
+        `Content-Type: text/html; charset=utf-8`,
+        `Content-Transfer-Encoding: 7bit`,
+        ``,
+        `<p>${draft.body.replace(/\n/g, '<br>')}</p>`,
+      ];
+
+      for (const att of draft.attachments!) {
+        const cleanBase64 = att.base64 ? att.base64.replace(/^data:[^;]+;base64,/, '') : '';
+        mimeParts.push(`--${boundary}`);
+        mimeParts.push(`Content-Type: ${att.mimeType || 'application/octet-stream'}; name="${att.filename}"`);
+        mimeParts.push(`Content-Disposition: attachment; filename="${att.filename}"`);
+        mimeParts.push(`Content-Transfer-Encoding: base64`);
+        mimeParts.push(``);
+        mimeParts.push(cleanBase64);
+      }
+
+      mimeParts.push(`--${boundary}--`);
+      rawMessage = mimeParts.join('\r\n');
+    } else {
+      rawMessage = [
+        `From: ${senderName} <${senderEmail}>`,
+        `To: ${recipientStr}`,
+        `Subject: ${draft.subject}`,
+        `Content-Type: text/html; charset=utf-8`,
+        `MIME-Version: 1.0`,
+        ``,
+        `<p>${draft.body.replace(/\n/g, '<br>')}</p>`,
+      ].join('\r\n');
+    }
 
     const base64Encoded = Buffer.from(rawMessage)
       .toString('base64')
@@ -322,6 +369,7 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
       bodyText: draft.body,
       bodyHtml: `<p>${draft.body.replace(/\n/g, '<br>')}</p>`,
       isSent: true,
+      attachmentsJson: attachmentsJson || undefined,
     },
     create: {
       userId,
@@ -337,6 +385,7 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
       isRead: true,
       isSent: true,
       labels: 'SENT',
+      attachmentsJson,
     },
   });
 
@@ -356,6 +405,7 @@ export async function sendEmailService(userId: string, draft: ComposeDraft): Pro
     isRead: created.isRead,
     isSent: created.isSent,
     labels: ['SENT'],
+    attachments: draft.attachments,
   };
 }
 
@@ -555,5 +605,34 @@ export async function permanentlyDeleteEmailService(userId: string, emailId: str
   await db.emailCache.deleteMany({
     where: { userId, OR: [{ id: email.id }, { gmailMessageId: email.gmailMessageId }] },
   });
+  return true;
+}
+
+export async function markEmailAsReadService(userId: string, emailId: string): Promise<boolean> {
+  const email = await db.emailCache.findFirst({
+    where: { userId, OR: [{ id: emailId }, { gmailMessageId: emailId }] },
+  });
+  if (!email) return false;
+
+  if (!email.isRead) {
+    try {
+      const gmail = await getAuthenticatedGmailClient(userId);
+      await gmail.users.messages.modify({
+        userId: 'me',
+        id: email.gmailMessageId,
+        requestBody: {
+          removeLabelIds: ['UNREAD'],
+        },
+      });
+      console.log('[Gmail API] Message mark-as-read synced for ' + email.gmailMessageId);
+    } catch (err: any) {
+      console.warn('[Gmail API Mark As Read Fallback]:', err?.message || err);
+    }
+
+    await db.emailCache.update({
+      where: { id: email.id },
+      data: { isRead: true },
+    });
+  }
   return true;
 }

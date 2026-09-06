@@ -48,6 +48,7 @@ model EmailCache {
   receivedAt     DateTime
   isRead         Boolean  @default(false)
   isSent         Boolean  @default(false)
+  attachmentsJson String?
   labels         String   @default("INBOX") // Comma-separated labels for SQLite compatibility
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
