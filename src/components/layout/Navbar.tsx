@@ -34,7 +34,7 @@ export function Navbar() {
 
   return (
     <header className="h-12 bg-[#14161A] border-b border-[#2A2D33] px-4 flex items-center justify-between shrink-0 font-sans transition-colors duration-150">
-      {/* Brand Wordmark (Fraunces Serif Semibold) */}
+      {/* Brand Wordmark (Source Serif 4 Semibold) */}
       <div className="flex items-center gap-2.5">
         <span className="font-serif-display text-[17px] font-semibold text-[#EDECE8] tracking-[-0.01em]">
           Nebula Mail
