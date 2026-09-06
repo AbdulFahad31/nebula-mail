@@ -164,42 +164,46 @@ export function NebulaBrief({ email }: NebulaBriefProps) {
         </div>
 
         {/* Action Items Section */}
-        {hasActionItems && (
-          <div className="space-y-1.5 pt-2 border-t border-[#2A2D33]">
-            <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73] flex items-center gap-1.5">
-              <ListChecks className="w-3 h-3 text-[#6B9971]" />
-              <span>Action Items</span>
-            </div>
+        <div className="space-y-1.5 pt-2 border-t border-[#2A2D33]">
+          <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73] flex items-center gap-1.5">
+            <ListChecks className="w-3 h-3 text-[#6B9971]" />
+            <span>Action Items</span>
+          </div>
+          {hasActionItems ? (
             <ul className="space-y-1 pl-1">
               {brief.actionItems.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-xs text-[#EDECE8]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#6B9971] shrink-0 mt-1.5" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#6B9971] shrink-0 mt-0.5" />
                   <span className="leading-relaxed">{item}</span>
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          ) : (
+            <p className="text-xs text-[#6B6D73] italic pl-1">No action items identified</p>
+          )}
+        </div>
 
         {/* Deadline Section */}
-        {brief.deadline && (
-          <div className="space-y-1 pt-2 border-t border-[#2A2D33]">
-            <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73]">
-              Deadline
-            </div>
+        <div className="space-y-1 pt-2 border-t border-[#2A2D33]">
+          <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73]">
+            Deadline
+          </div>
+          {brief.deadline ? (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#14161A] border border-[#2A2D33] text-xs font-medium text-[#EDECE8]">
               <Clock className="w-3.5 h-3.5 text-[#6B9971]" />
               <span>{brief.deadline}</span>
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-xs text-[#6B6D73] italic">No deadline identified</p>
+          )}
+        </div>
 
         {/* Key Points Section */}
-        {hasKeyPoints && (
-          <div className="space-y-1.5 pt-2 border-t border-[#2A2D33]">
-            <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73]">
-              Key Points
-            </div>
+        <div className="space-y-1.5 pt-2 border-t border-[#2A2D33]">
+          <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73]">
+            Key Points
+          </div>
+          {hasKeyPoints ? (
             <ul className="space-y-1 pl-1">
               {brief.keyPoints.map((point, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-xs text-[#9A9CA3]">
@@ -208,28 +212,34 @@ export function NebulaBrief({ email }: NebulaBriefProps) {
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          ) : (
+            <p className="text-xs text-[#6B6D73] italic pl-1">No key points identified</p>
+          )}
+        </div>
 
         {/* Suggested Reply Section */}
-        {brief.suggestedReply && (
-          <div className="space-y-2 pt-2 border-t border-[#2A2D33]">
-            <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73]">
-              Suggested Reply
-            </div>
-            <div className="p-3 rounded-lg bg-[#14161A] border border-[#2A2D33] text-xs text-[#9A9CA3] italic leading-relaxed font-sans">
-              "{brief.suggestedReply}"
-            </div>
-            <button
-              type="button"
-              onClick={() => handleDraftReplyClick(brief.suggestedReply!)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1C1F24] hover:bg-[#6B9971] text-[#6B9971] hover:text-[#EDECE8] border border-[#6B9971]/60 font-medium text-xs transition-colors font-sans"
-            >
-              <MessageSquareReply className="w-3.5 h-3.5" />
-              <span>Draft Reply</span>
-            </button>
+        <div className="space-y-2 pt-2 border-t border-[#2A2D33]">
+          <div className="text-[10px] uppercase tracking-wider font-semibold font-sans text-[#6B6D73]">
+            Suggested Reply
           </div>
-        )}
+          {brief.suggestedReply ? (
+            <>
+              <div className="p-3 rounded-lg bg-[#14161A] border border-[#2A2D33] text-xs text-[#9A9CA3] italic leading-relaxed font-sans">
+                "{brief.suggestedReply}"
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDraftReplyClick(brief.suggestedReply!)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1C1F24] hover:bg-[#6B9971] text-[#6B9971] hover:text-[#EDECE8] border border-[#6B9971]/60 font-medium text-xs transition-colors font-sans focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6B9971]"
+              >
+                <MessageSquareReply className="w-3.5 h-3.5" />
+                <span>Draft Reply</span>
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-[#6B6D73] italic">No suggested reply</p>
+          )}
+        </div>
       </motion.div>
     </AnimatePresence>
   );

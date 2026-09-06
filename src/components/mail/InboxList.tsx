@@ -142,7 +142,16 @@ export function InboxList({ onToggleCollapse }: InboxListProps = {}) {
         {isLoading && emails.length === 0 ? (
           <div className="p-6 text-center text-xs text-[#6B6D73] font-sans">Loading correspondence...</div>
         ) : emails.length === 0 ? (
-          <div className="p-6 text-center text-xs text-[#6B6D73] font-sans">No correspondence matches active filters</div>
+          <div className="p-8 text-center space-y-1.5 font-sans">
+            <p className="text-xs font-serif-display font-medium text-[#EDECE8]">
+              {Object.keys(useMailStore.getState().filterState).length > 0 ? 'No emails found' : 'Nothing here'}
+            </p>
+            <p className="text-[11px] text-[#6B6D73]">
+              {Object.keys(useMailStore.getState().filterState).length > 0
+                ? 'Try a different search or remove a filter.'
+                : "This folder doesn't contain any messages."}
+            </p>
+          </div>
         ) : (
           emails.map((email) => <EmailRow key={email.id} email={email} />)
         )}

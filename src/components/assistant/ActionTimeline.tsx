@@ -32,7 +32,7 @@ export function ActionTimeline() {
               <CheckCircle2 className="w-3.5 h-3.5 text-[#6B9971] shrink-0 mt-0.5" />
             )}
             {step.status === 'failed' && (
-              <XCircle className="w-3.5 h-3.5 text-[#6B9971]/60 shrink-0 mt-0.5" />
+              <XCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
             )}
 
             <div className="flex-1 min-w-0 font-sans">

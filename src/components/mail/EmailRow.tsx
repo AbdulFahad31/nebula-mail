@@ -64,10 +64,21 @@ export function EmailRow({ email }: EmailRowProps) {
   const avatar = getAvatarStyles(avatarName);
   const avatarLetter = (avatarName.replace(/^To:s*/i, '').trim().charAt(0) || 'U').toUpperCase();
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex items-start gap-3 py-3 px-3.5 border-b border-[#2A2D33] cursor-pointer transition-colors duration-150 ${
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-selected={isSelected}
+      className={`group relative flex items-start gap-3 py-3 px-3.5 border-b border-[#2A2D33] cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6B9971] ${
         isSelected
           ? 'bg-[#1C1F24] border-l-2 border-l-[#6B9971]'
           : 'bg-[#14161A] hover:bg-[#1C1F24]'
@@ -75,7 +86,7 @@ export function EmailRow({ email }: EmailRowProps) {
     >
       <div className="w-2 pt-2 flex justify-center shrink-0">
         {!email.isRead && (
-          <span className="w-2 h-2 rounded-full bg-[#6B9971]" />
+          <span className="w-2 h-2 rounded-full bg-[#6B9971]" title="Unread message" />
         )}
       </div>
 
@@ -105,15 +116,17 @@ export function EmailRow({ email }: EmailRowProps) {
                 <>
                   <button
                     onClick={handleRestore}
-                    className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors"
+                    className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6B9971]"
                     title="Restore to inbox"
+                    aria-label="Restore to inbox"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={handlePermanentDelete}
-                    className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors"
+                    className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6B9971]"
                     title="Delete permanently"
+                    aria-label="Delete permanently"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -121,8 +134,9 @@ export function EmailRow({ email }: EmailRowProps) {
               ) : (
                 <button
                   onClick={handleDelete}
-                  className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors"
+                  className="p-1 rounded text-[#9A9CA3] hover:text-[#EDECE8] hover:bg-[#2A2D33] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#6B9971]"
                   title="Move to Trash"
+                  aria-label="Move to Trash"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

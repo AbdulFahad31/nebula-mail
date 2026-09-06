@@ -185,7 +185,7 @@ export function AssistantPanel({ onToggleCollapse, isCollapsed }: AssistantPanel
             className="p-3 rounded-md bg-[#1C1F24] border border-[#2A2D33] flex items-center gap-2.5 text-xs text-[#9A9CA3] font-sans"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#6B9971] animate-spin" />
-            Evaluating tool call trajectory...
+            Analyzing email & planning actions...
           </motion.div>
         )}
       </div>
