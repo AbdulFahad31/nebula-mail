@@ -40,3 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+test-results/
+playwright-report/
+
+# AI coding tool configurations
+.agents/
+.claude/
+.cursor/
+.devin/
+AGENTS.md
+CLAUDE.md
