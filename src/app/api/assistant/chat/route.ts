@@ -25,7 +25,7 @@ Rules:
 6. For context-aware reply ("Reply that..."): call reply_to_email using current open email or search result.
 7. For compound filter ("unread from this week"): call apply_email_filter with { isUnread: true, startDate }.
 8. For plain unread search ("show me unread emails"): call apply_email_filter with ONLY { isUnread: true }. NEVER add startDate or after unless explicitly asked.
-9. Do NOT hardcode fictional message IDs like 'msg_alex_03' or 'msg_sarah_01'.`;
+9. For 'open email' requests (e.g. 'open email from google', 'open the email about X'): extract the target sender (e.g. 'google') or topic and call search_emails with from: 'google' or keyword: 'x', AND call open_email. NEVER put command verbs like 'Open', 'Find', or 'Search' inside the keyword parameter.`;
 
       const response = await fallbackOrchestrator.generateContent({
         prompt,
@@ -168,8 +168,29 @@ async function handleRuleBasedAssistant(prompt: string, currentOpenEmailId?: str
     });
   }
 
-  // Default search: extract keyword safely without destructive string regex replacement
-  const keywordExtract = prompt.replace(/^(?:find|search|show|get|pull\s+up)\s+(?:emails?|messages?|correspondence)?\s*(?:about|for|from|regarding)?/i, '').trim() || prompt;
+  // Scenario 7: Open / Search from specific sender or topic (e.g. "Open the email from google", "Open email from Sarah", "Search emails about Google")
+  const openOrSearchMatch = prompt.match(/^(?:open|find|search|show|get|pull\s+up)\s+(?:the\s+)?(?:emails?|messages?|correspondence)?\s*(?:about|for|from|regarding)?\s+(.+)$/i);
+  if (openOrSearchMatch) {
+    let target = openOrSearchMatch[1].trim();
+    target = target.replace(/^(?:the\s+)?(?:email|message|correspondence)?\s*(?:from|about|regarding|for)?\s+/i, '').trim();
+
+    const isFrom = p.includes('from') || prompt.toLowerCase().includes('from');
+    const searchArgs = isFrom ? { from: target } : { keyword: target };
+
+    return NextResponse.json({
+      reply: `Searched and opened email matching "${target}".`,
+      toolCalls: [
+        { name: 'search_emails', args: searchArgs },
+        { name: 'open_email', args: { messageId: target } },
+      ],
+    });
+  }
+
+  // Default search fallback
+  const keywordExtract = prompt
+    .replace(/^(?:open|find|search|show|get|pull\s+up)\s+(?:the\s+)?(?:emails?|messages?|correspondence)?\s*(?:about|for|from|regarding)?/i, '')
+    .trim() || prompt;
+
   return NextResponse.json({
     reply: `Searched inbox for "${keywordExtract}".`,
     toolCalls: [
