@@ -30,13 +30,6 @@ export async function POST(req: NextRequest) {
     }
     rateLimitMap.set(emailId, now);
 
-    // Runtime environment check to confirm keys are loaded when handler executes
-    console.log('[Brief API Route] Runtime Env Check:', {
-      GEMINI_API_KEY: Boolean(process.env.GEMINI_API_KEY),
-      GROQ_API_KEY: Boolean(process.env.GROQ_API_KEY),
-      TOKEN_ROUTER_API_KEY: Boolean(process.env.TOKEN_ROUTER_API_KEY),
-    });
-
     // Fetch email server-side from database cache (do not trust client body content)
     const email = await db.emailCache.findFirst({
       where: {

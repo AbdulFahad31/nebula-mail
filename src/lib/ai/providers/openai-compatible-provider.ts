@@ -107,7 +107,7 @@ export class OpenAICompatibleProvider implements AIProvider {
             try {
               parsedArgs = JSON.parse(tc.function.arguments);
             } catch (e) {
-              console.warn(`[${this.name}] Failed to parse tool arguments JSON:`, tc.function.arguments);
+              console.warn(`[${this.name}] Failed to parse tool arguments JSON`);
             }
           } else if (typeof tc.function.arguments === 'object') {
             parsedArgs = tc.function.arguments;
