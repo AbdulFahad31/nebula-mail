@@ -34,14 +34,49 @@ The brief specifies five natural-language behaviors the assistant has to demonst
 
 ## Architecture
 
-Every interaction — a UI click or an instruction to the assistant — goes through one command layer before it ever touches Gmail:
+Every interaction — a UI click or an instruction to the assistant — goes through one command layer before it ever touches Gmail, and every AI-backed feature goes through the same provider fallback chain before it ever touches an external model:
 
-```
-UI click  ──┐
-             ├──▶  src/lib/commands  ──▶  Gmail service  ──▶  Gmail REST API
-AI request ──┘             │
-                            ▼
-                     Application state ──▶ UI updates
+```mermaid
+flowchart TD
+    UI[User Interface] <--> Zustand[Zustand — UI state]
+    UI <--> TanStack[TanStack Query — server cache]
+
+    subgraph App[Next.js App Router]
+        Commands[Command Layer<br/>src/lib/commands]
+        Assistant[AI Assistant<br/>/api/assistant/chat]
+        Brief[Nebula Brief<br/>src/lib/ai/email-brief.ts]
+        Auth[OAuth + Token Encryption<br/>src/lib/auth]
+    end
+
+    subgraph AI[AI Provider Fallback Chain]
+        Orchestrator[Fallback Orchestrator]
+        Gemini[Tier 1 — Gemini 2.5 Flash]
+        Groq[Tier 2 — Groq]
+        TokenRouter[Tier 3 — TokenRouter]
+        Local[Tier 4 — Local extractive fallback]
+    end
+
+    subgraph Sync[Data & Sync]
+        DB[(Prisma — SQLite / PostgreSQL)]
+        Webhook[Pub/Sub Webhook + SSE]
+        Polling[20s Polling Fallback]
+    end
+
+    Gmail[Gmail REST API]
+
+    UI <--> Commands
+    Commands <--> Assistant
+    Assistant <--> Orchestrator
+    Brief <--> Orchestrator
+    Orchestrator --> Gemini
+    Gemini -- retryable failure --> Groq
+    Groq -- retryable failure --> TokenRouter
+    TokenRouter -- retryable failure --> Local
+    Commands <--> Gmail
+    Auth <--> DB
+    Gmail --> Webhook
+    Webhook --> TanStack
+    Polling --> TanStack
 ```
 
 The assistant never calls the Gmail API directly. It calls a fixed set of Zod-validated commands — `search_emails`, `open_email`, `apply_email_filter`, `open_compose`, `populate_compose`, `send_email`, `reply_to_email`, `forward_email` — and those are the exact same functions the manual UI controls call. A filter dropdown and a typed instruction that both mean "unread emails from this week" produce identical results because they're the same code path, not two implementations that happen to agree.
