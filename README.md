@@ -1,185 +1,149 @@
-# 🌌 Nebula Mail — Production-Grade AI-Native Email Client
+# Nebula Mail
 
-Nebula Mail is a state-of-the-art, production-ready, AI-native web email client built on top of **Next.js 16 (App Router + Turbopack)**, **TailwindCSS**, **TanStack Query v5**, **Zustand**, **Prisma ORM**, and the **Google Gmail REST API**. 
+Nebula Mail is a web-based email client, connected to a real Gmail account, where an AI assistant operates the interface directly rather than just answering questions about it. Asking the assistant to search, filter, compose, or reply causes the actual inbox, filters, and compose form to update in the UI — the same way a person clicking through the app would.
 
-It features a symmetric command architecture where every user interaction and AI assistant tool call route through the exact same execution pipeline, guarded by a **Human-in-the-Loop Authorization System**, a **3-Tier Multi-Provider AI Fallback Chain (Gemini → Groq → TokenRouter → Local Extractive Engine)**, and real-time **Nebula Brief** AI email summarization.
+Built for the Nebula KnowLab AI-Powered Mail Web App hiring assignment.
 
----
+## Screenshots
 
-## 🏗️ Architectural Overview & System Design
+**Real Gmail data with the assistant's action timeline.** The inbox shows live messages from a connected account, including one with a full recipient list of 60+ addresses parsed and displayed correctly. The right panel logs each step the assistant takes as it works.
 
-Nebula Mail bridges modern frontend state management with Google Cloud infrastructure, live Gmail REST APIs, and a resilient multi-provider AI engine.
+![Inbox with real Gmail data and the AI action timeline](./screenshots/01-inbox-and-action-timeline.png)
 
-```mermaid
-flowchart TD
-    UI([User Interface / Chrome]) <--> ZustandStore[Zustand Local UI Store]
-    UI <--> TanStack[TanStack Query Server Cache]
+**Third-party HTML rendered without breaking the app's own styling.** Marketing emails and newsletters bring their own CSS and layout. This one is isolated in its own sandboxed container, sized to its actual content, with no bleed into the surrounding interface.
 
-    subgraph App Layer [Next.js App Router]
-        CommandLayer[Symmetric Command Layer\nsrc/lib/commands/index.ts]
-        AIAssistant[AI Assistant Engine\n/api/assistant/chat]
-        NebulaBrief[Nebula Brief Generator\nsrc/lib/ai/email-brief.ts]
-        AuthModule[Google OAuth 2.0 & Token Encryptor\nsrc/lib/auth]
-    end
+![A newsletter email rendered with its original formatting preserved](./screenshots/02-original-formatting-preserved.png)
 
-    subgraph Resilient AI Provider Fallback Chain
-        AIOrchestrator[Fallback Orchestrator\nsrc/lib/ai/providers/fallback-orchestrator.ts]
-        GeminiProvider[Tier 1: Gemini Flash\nGEMINI_API_KEY]
-        GroqProvider[Tier 2: Groq Fallback\nGROQ_API_KEY]
-        TokenRouterProvider[Tier 3: TokenRouter Fallback\nTOKEN_ROUTER_API_KEY]
-        LocalExtractive[Tier 4: Local Extractive Fallback\nNo API Key Required]
-    end
+**Compose, with file attachments.** The compose window supports selecting files from the device and attaching them before sending, in addition to the standard To/Subject/body fields.
 
-    subgraph Data & Sync Layer
-        PrismaDB[(Prisma ORM + SQLite / PostgreSQL)]
-        PubSubWebhook[Pub/Sub Webhook & SSE Stream\n/api/webhooks/gmail]
-        PollingFallback[Silent 20s Polling Fallback\n/api/sync/refresh]
-    end
+![The compose modal open with an attach option, layered over an email in the reading pane](./screenshots/03-compose-with-attachments.png)
 
-    subgraph External Cloud Services
-        GmailAPI[Google Gmail REST API v1]
-    end
+**Account switching and the Sent view.** Sent messages are labeled by recipient rather than by the account's own address, and the account menu supports switching or disconnecting a connected Google account.
 
-    UI <--> CommandLayer
-    CommandLayer <--> AIAssistant
-    NebulaBrief <--> AIOrchestrator
-    AIAssistant <--> AIOrchestrator
-    AIOrchestrator --> GeminiProvider
-    GeminiProvider -- 429 / 5xx / Timeout --> GroqProvider
-    GroqProvider -- 429 / 5xx / Timeout --> TokenRouterProvider
-    TokenRouterProvider -- 429 / 5xx / Timeout --> LocalExtractive
-    CommandLayer <--> GmailAPI
-    AuthModule <--> PrismaDB
-    GmailAPI --> PubSubWebhook
-    PubSubWebhook --> TanStack
-    PollingFallback --> TanStack
+![The account switcher menu open above the Sent folder, showing recipient-labeled rows](./screenshots/04-account-switcher-and-sent-view.png)
+
+## What it does
+
+- **Inbox, Sent, and Trash** backed by real Gmail data, with read/unread state, recoverable delete (moves to Gmail's actual Trash) and restore, and a separate confirmation step for permanent deletion.
+- **Compose**, with support for attaching files from the device and sending real multipart MIME messages through the Gmail API.
+- **Search and filtering**, both through ordinary UI controls and through natural language, backed by the same underlying logic in both cases.
+- **An AI assistant panel** that can search, open, filter, compose, and reply by invoking the same application commands a manual click would — not by describing what it would do. Any outgoing message it prepares is held behind a confirmation step before it's actually sent.
+- **A resizable three-pane layout** (navigation, message list, reading pane / assistant), with panel sizes remembered across sessions.
+- **Nebula Brief**, an on-demand summary of the open email: a short synopsis, extracted action items, any stated deadline, and a one-click drafted reply.
+
+## Architecture
+
+Every interaction — a click in the UI or an instruction to the assistant — goes through the same command layer before touching Gmail:
+
+```
+UI click  ──┐
+             ├──▶  Command layer  ──▶  Gmail service  ──▶  Gmail API
+AI request ──┘            │
+                           ▼
+                     Application state ──▶ UI updates
 ```
 
----
+The AI assistant never calls the Gmail API directly. It calls a fixed set of commands (`search_emails`, `open_email`, `apply_email_filter`, `open_compose`, `populate_compose`, `send_email`, `reply_to_email`, `forward_email`), each validated with Zod, and those commands are the same ones the manual UI controls call. This keeps the two paths provably consistent and means a bug fix in one covers both.
 
-## 🔑 Order of AI API Keys & Resilient Fallback Engine
+Server state (emails, threads, search results) is held in TanStack Query; UI-only state (selected email, open panels, filter chips, compose drawer) is kept separately in Zustand.
 
-When Nebula Mail processes an AI request (such as an AI Assistant natural language query or generating a Nebula Brief), it evaluates providers in the following strict priority order:
+## AI provider fallback
 
-1. **First Priority — `GEMINI_API_KEY` (Google Gemini)**
-   - Fast, high-capacity primary model (`gemini-1.5-flash` / `gemini-2.5-flash`).
-   - If configured and operational, requests complete instantly via Tier 1.
-2. **Second Priority — `GROQ_API_KEY` (Groq Llama 3)**
-   - Engaged automatically if Gemini is unconfigured, rate-limited (HTTP 429), timing out (>12s), or experiencing server errors (5xx).
-   - High-speed open-weights inference engine.
-3. **Third Priority — `TOKEN_ROUTER_API_KEY` (TokenRouter AI)**
-   - Engaged automatically if both Gemini and Groq fail or run out of quota.
-   - Provides seamless continuity via GPT-4o-mini compatible routing.
-4. **Fourth Priority — Local Extractive NLP Engine (Fail-Safe)**
-   - Zero external API key requirement.
-   - Automatically engages if all external cloud providers fail or key quotas are exhausted.
-   - Ensures the application **NEVER crashes** or returns a blank error to the user!
+AI calls (the assistant and Nebula Brief) go through a small provider chain rather than depending on a single API:
 
----
+1. Gemini (primary)
+2. Groq
+3. TokenRouter
+4. A local, non-API extractive fallback, so the app degrades to a simpler result instead of failing outright if all three external providers are unavailable
 
-## 🌟 Comprehensive Feature List & Step-by-Step Testing Guide
+Each provider implements the same interface and returns a normalized response, so neither the command layer nor Nebula Brief needs to know which one actually handled a given request. Only failures classified as retryable (rate limits, server errors, timeouts) advance to the next provider; configuration errors like a bad key are surfaced immediately rather than masked by a fallback.
 
-### 1. Resizable 3-Column Layout
-- **How it works**: Managed by `react-resizable-panels` across three panes: Navigation Rail (Left), Email List & Smart Filters (Center), and Email Detail / AI Brief Pane (Right).
-- **How to test**: Drag the vertical border lines between columns to resize.
-- **Expected reaction**: Layout resizes smoothly without breaking text overflow or creating horizontal scrollbars. Panel width preferences persist across refreshes.
+## Real-time sync
 
-### 2. Live Gmail Sync & Offline Demo Seed
-- **How to test**: Click the static circular refresh icon next to the Inbox header, or connect your Google Account via OAuth.
-- **Expected reaction**: The refresh icon spins smoothly while fetching from `/api/sync/refresh`. The list updates immediately with live Gmail messages or pre-seeded demo emails.
+New mail arriving from outside the app is delivered via Gmail's push mechanism: a registered mailbox watch notifies a Cloud Pub/Sub topic, which pushes to a webhook in this app, which fetches only what changed since the last sync and updates the UI over Server-Sent Events. Gmail watches expire and are renewed automatically.
 
-### 3. Read Status Auto-Sync
-- **How to test**: Click on any unread email (marked with a green dot indicator).
-- **Expected reaction**: The unread green dot instantly clears client-side AND dispatches a background request to remove the `UNREAD` label from Gmail API.
+Pub/Sub push requires a publicly reachable HTTPS endpoint, which isn't available on a plain `localhost` dev server. For local development, the app additionally polls for changes every 20 seconds so new mail still appears without a manual refresh; this fallback isn't needed once the app is deployed somewhere with a real public URL.
 
-### 4. Smart Search & Filter Chips
-- **How to test**: Type keywords in the top search bar (e.g. `google`, `invoice`, `unread`), or click quick filter chips like "Unread", "Has Attachment", or date filters.
-- **Expected reaction**: Active filter chips display below the search bar. The email list filters instantly in real time. Clicking the "X" on a chip clears that filter cleanly.
+## Tech stack
 
-### 5. Nebula Brief (AI Email Summarizer)
-- **How to test**: Select an email in the list and click the **`✨ Generate Brief`** button in the reading pane.
-- **Expected reaction**: An animated skeleton shimmer appears while analyzing. Once ready, it displays a structured summary, explicit action items, deadlines, key points, and a suggested reply draft with a **`Draft Reply`** button.
-- **Draft Reply interaction**: Clicking "Draft Reply" opens the Compose modal pre-filled with recipient details and suggested text.
+Next.js (App Router) · React · TypeScript · Tailwind CSS · Zustand · TanStack Query · Prisma · Gmail REST API · Google OAuth 2.0 · Google Cloud Pub/Sub · Server-Sent Events · Zod · Vitest · Playwright
 
-### 6. AI Assistant Panel & Natural Language Control
-- **How to test**: Click preset suggestion chips in the right-side Assistant Panel (e.g., *"Search emails from last 10 days"*, *"Show me unread emails"*, or *"Draft an email to john@example.com"*), or type custom natural language commands.
-- **Expected reaction**: The AI Assistant analyzes the request, triggers real-time tool calls, updates the Action Timeline (`running` -> `completed`), and performs the corresponding UI action automatically.
+## Setup
 
-### 7. Human-in-the-Loop Authorization Card
-- **How to test**: Ask the AI Assistant to send an email (e.g., *"Send email to alice@example.com with subject Project Update"*).
-- **Expected reaction**: Instead of silently sending external communications, an **Authorization Required** card appears in the Assistant drawer. You can inspect recipients, subject, body, add local file attachments via paperclip, and click **Approve & Send** or **Cancel**.
+### Prerequisites
 
-### 8. Compose Form & Multi-File Attachments
-- **How to test**: Click the **New Message** button or paperclip icon. Select local files (PDFs, images, documents).
-- **Expected reaction**: Attachment chips appear with formatted file sizes (e.g., `2.4 MB`). Sending dispatches an RFC 2822 multipart MIME email, clears filters, switches to Sent view, and updates the thread.
+- Node.js 18 or later
+- npm
 
-### 9. Recoverable Trash & Permanent Delete
-- **How to test**: Click **Trash** on an email to move it to Trash view. Navigate to Trash, and click **Restore** or **Delete Permanently**.
-- **Expected reaction**: Moving to trash syncs with `/api/mail/[id]/trash`. Restoring returns the email to the inbox. Permanent delete displays a confirmation card and removes the row cleanly.
+### 1. Install and configure
 
----
+```bash
+npm install
+cp .env.example .env
+```
 
-## 🛠️ Setup & Running Instructions
-
-### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
-
-### 2. Environment Configuration (`.env`)
-
-Create a `.env` file in the root directory based on `.env.example`:
+Fill in `.env`:
 
 ```env
 DATABASE_URL="file:./dev.db"
 NEXT_PUBLIC_APP_URL="http://localhost:3001"
 
-# Google OAuth 2.0 Credentials (Gmail API)
 GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 GOOGLE_REDIRECT_URI="http://localhost:3001/api/auth/callback/google"
 
-# Multi-Provider AI Keys
 GEMINI_API_KEY="your-gemini-api-key"
 GROQ_API_KEY="your-groq-api-key"
 TOKEN_ROUTER_API_KEY="your-token-router-api-key"
 
-# Auth Secrets
-AUTH_SECRET="super-secret-jwt-cookie-key-min-32-chars"
-ENCRYPTION_SECRET="0123456789abcdef0123456789abcdef"
+AUTH_SECRET="a-random-32-character-or-longer-string"
+ENCRYPTION_SECRET="a-32-byte-hex-string-for-aes-256-gcm"
 ```
 
-### 3. Execution Commands
+### 2. Google OAuth (Gmail access)
+
+1. In the [Google Cloud Console](https://console.cloud.google.com), create or select a project and enable the **Gmail API**.
+2. Configure the OAuth consent screen, adding the Gmail scopes the app needs (read, send, and modify).
+3. Under **Credentials**, create an **OAuth 2.0 Client ID** for a web application, and add `http://localhost:3001/api/auth/callback/google` as an authorized redirect URI (update this to the real deployed URL later if the app is hosted elsewhere).
+4. Copy the client ID and secret into `.env`.
+
+### 3. Google Cloud Pub/Sub (real-time push)
+
+1. Enable the **Cloud Pub/Sub API** in the same project.
+2. Create a topic (for example `gmail-notifications`).
+3. Grant the Gmail push service account, `gmail-api-push@system.gserviceaccount.com`, the **Pub/Sub Publisher** role on that topic.
+4. Create a push subscription on the topic, with the endpoint set to `https://<your-domain>/api/webhooks/gmail`.
+5. For local development, expose `localhost:3001` with a tunnel (e.g. `ngrok http 3001`) and point the subscription at the tunnel's HTTPS URL — Pub/Sub can't push to `localhost` directly. Without this, the app still works via its polling fallback.
+
+### 4. Database and run
 
 ```bash
-# Install dependencies
-npm install
-
-# Push database schema to local SQLite
 npx prisma db push
-
-# Run development server
 npm run dev
 ```
 
-Open **[http://localhost:3001](http://localhost:3001)** in your browser.
+Open `http://localhost:3001`.
 
----
-
-## 🧪 Verification & Automated Test Suite
+## Testing
 
 ```bash
-# 1. Static Typecheck (0 Errors)
-npx tsc --noEmit
-
-# 2. Vitest Unit Test Suite (24/24 Passed)
-npm test
-
-# 3. Next.js Production Build Verification
-npm run build
+npx tsc --noEmit      # type check
+npm test               # unit tests (Vitest)
+npx playwright test    # end-to-end tests
+npm run build           # production build check
 ```
 
----
+## Design decisions and trade-offs
 
-## 📄 License & Attributions
+**SQLite instead of PostgreSQL.** The brief specified Postgres; this project uses SQLite through Prisma for local development and evaluation, since it needs no separate database service to set up. The schema is Prisma-managed, so switching the datasource to Postgres for a real deployment is a configuration change, not a rewrite — connection pooling and concurrent-write handling would need attention at that point, which SQLite doesn't require locally.
 
-Built with ❤️ for modern AI-native productivity. Powered by Next.js, TailwindCSS, TanStack Query, Zustand, Prisma, Google Gmail API, and Google Gemini AI.
+**A single command layer instead of separate UI and AI code paths.** Routing both manual actions and AI tool calls through the same functions costs a bit of extra abstraction up front, but means the assistant can never drift out of sync with what the UI itself is capable of.
+
+**Trash instead of permanent delete as the default.** Deleting a message moves it to Gmail's actual Trash rather than removing it outright, matching what Gmail itself does and giving a recovery path before anything is irreversible.
+
+## Future improvements
+
+- Thread/conversation view grouping related messages
+- Reply and forward available directly from the assistant's natural-language flow, not only manually
+- A deployed instance with a stable public URL, removing the need for the local polling fallback
+- Server-side pagination tuning for very large mailboxes
